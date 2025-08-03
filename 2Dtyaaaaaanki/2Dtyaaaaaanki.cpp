@@ -77,7 +77,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
     // Загрузка фонового изображения
     g_hBackground = (HBITMAP)LoadImageW(
         NULL,
-        L"tyanki.bmp", // Исправленный путь
+        L"tyanki.bmp", // Исправленный путь вв
         IMAGE_BITMAP,
         0, 0,
         LR_LOADFROMFILE
