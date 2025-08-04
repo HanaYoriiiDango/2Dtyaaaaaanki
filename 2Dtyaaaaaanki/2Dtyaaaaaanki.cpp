@@ -1,136 +1,82 @@
-п»ї#include <windows.h>
+#include <windows.h>
+//linker::system::subsystem  - Windows(/ SUBSYSTEM:WINDOWS) - ожидает wWinMain, а не main
+//configuration::advanced::character set - not set - хз зачем, но зато теперь могу обращаться к структурам
 
-// Р“Р»РѕР±Р°Р»СЊРЅС‹Рµ РїРµСЂРµРјРµРЅРЅС‹Рµ РґР»СЏ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
-HBITMAP g_hBackground = NULL;  // РҐСЌРЅРґР» РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
-int g_winWidth = 0;            // РЁРёСЂРёРЅР° РѕРєРЅР°
-int g_winHeight = 0;           // Р’С‹СЃРѕС‚Р° РѕРєРЅР°
-int g_imgWidth = 0;            // РЁРёСЂРёРЅР° РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
-int g_imgHeight = 0;           // Р’С‹СЃРѕС‚Р° РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
+struct sprite {
+	float x, y, width, height, speed;
+	HBITMAP hBitmap;
+};
 
-LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    switch (uMsg) {
-    case WM_DESTROY:
-        // РћСЃРІРѕР±РѕР¶РґР°РµРј СЂРµСЃСѓСЂСЃС‹ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
-        if (g_hBackground) {
-            DeleteObject(g_hBackground);
-            g_hBackground = NULL;
-        }
-        PostQuitMessage(0);
-        return 0;
+sprite Enemy; 
+sprite Player;
 
-    case WM_KEYDOWN:
-        if (wParam == VK_ESCAPE)
-            DestroyWindow(hwnd);
-        return 0;
+struct {
+    HWND hWnd;//хэндл окна
+    HDC device_context, context;// два контекста (для буферизации)
+    int width, height;//сюдв сохраняем размеры окна 
+} window;
 
-    case WM_SIZE:
-        // РЎРѕС…СЂР°РЅСЏРµРј РЅРѕРІС‹Рµ СЂР°Р·РјРµСЂС‹ РѕРєРЅР°
-        g_winWidth = LOWORD(lParam);
-        g_winHeight = HIWORD(lParam);
-        // РўСЂРµР±СѓРµРј РїРµСЂРµСЂРёСЃРѕРІРєРё
-        InvalidateRect(hwnd, NULL, TRUE);
-        return 0;
+HBITMAP hBackground;// для фона 
 
-    case WM_PAINT: {
-        PAINTSTRUCT ps;
-        HDC hdc = BeginPaint(hwnd, &ps);
+void InitGame() { // здесь буду иницализировать все свойства игровых обьектов и спрайьты
 
-        // Р”РІРѕР№РЅР°СЏ Р±СѓС„РµСЂРёР·Р°С†РёСЏ (СЃРј. РѕР±СЉСЏСЃРЅРµРЅРёРµ РЅРёР¶Рµ)
-        HDC hdcMem = CreateCompatibleDC(hdc);
-        HBITMAP hbmBuffer = CreateCompatibleBitmap(hdc, g_winWidth, g_winHeight);
-        SelectObject(hdcMem, hbmBuffer);
+    Enemy.hBitmap = (HBITMAP)LoadImageA(NULL, "pugalo.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    Player.hBitmap = (HBITMAP)LoadImageA(NULL, "hero.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    hBackground = (HBITMAP)LoadImageA(NULL, "Forest.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
 
-        // Р—Р°Р»РёРІР°РµРј С„РѕРЅ С‡С‘СЂРЅС‹Рј (РЅР° СЃР»СѓС‡Р°Р№ РѕС€РёР±РєРё Р·Р°РіСЂСѓР·РєРё)
-        FillRect(hdcMem, &ps.rcPaint, (HBRUSH)GetStockObject(BLACK_BRUSH));
 
-        // Р•СЃР»Рё РёР·РѕР±СЂР°Р¶РµРЅРёРµ Р·Р°РіСЂСѓР¶РµРЅРѕ - СЂРёСЃСѓРµРј СЃ СЂР°СЃС‚СЏР¶РµРЅРёРµРј
-        if (g_hBackground) {
-            HDC hdcImg = CreateCompatibleDC(hdc);
-            SelectObject(hdcImg, g_hBackground);
-
-            // Р Р°СЃС‚СЏРіРёРІР°РµРј РёР·РѕР±СЂР°Р¶РµРЅРёРµ РЅР° РІСЃСЋ РѕР±Р»Р°СЃС‚СЊ РѕРєРЅР°
-            SetStretchBltMode(hdcMem, COLORONCOLOR); // Р РµР¶РёРј СЂР°СЃС‚СЏР¶РµРЅРёСЏ
-            StretchBlt(
-                hdcMem, 0, 0, g_winWidth, g_winHeight,    // РќР°Р·РЅР°С‡РµРЅРёРµ
-                hdcImg, 0, 0, g_imgWidth, g_imgHeight,    // РСЃС‚РѕС‡РЅРёРє
-                SRCCOPY                                   // РћРїРµСЂР°С†РёСЏ
-            );
-            DeleteDC(hdcImg);
-        }
-
-        // РљРѕРїРёСЂСѓРµРј Р±СѓС„РµСЂ РЅР° СЌРєСЂР°РЅ
-        BitBlt(hdc, 0, 0, g_winWidth, g_winHeight, hdcMem, 0, 0, SRCCOPY);
-
-        // РћС‡РёСЃС‚РєР° СЂРµСЃСѓСЂСЃРѕРІ
-        DeleteObject(hbmBuffer);
-        DeleteDC(hdcMem);
-        EndPaint(hwnd, &ps);
-        return 0;
-    }
-    }
-    return DefWindowProcW(hwnd, uMsg, wParam, lParam);
 }
 
-int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow) {
-    const wchar_t CLASS_NAME[] = L"РЁРёСЂРѕРєРёРµ РґРѕ С…СѓСЏ";
+void ProcessSound() { // здесь буду проигрывать музыку
 
-    // Р—Р°РіСЂСѓР·РєР° С„РѕРЅРѕРІРѕРіРѕ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
-    g_hBackground = (HBITMAP)LoadImageW(
-        NULL,
-        L"tyanki.bmp", // РСЃРїСЂР°РІР»РµРЅРЅС‹Р№ РїСѓС‚СЊ РІРІ
-        IMAGE_BITMAP,
-        0, 0,
-        LR_LOADFROMFILE
-    );
 
-    if (!g_hBackground) {
-        MessageBoxW(NULL,
-            L"РћС€РёР±РєР° Р·Р°РіСЂСѓР·РєРё РёР·РѕР±СЂР°Р¶РµРЅРёСЏ!\nРџСЂРѕРІРµСЂСЊС‚Рµ РїСѓС‚СЊ Рё С„РѕСЂРјР°С‚ С„Р°Р№Р»Р°.",
-            L"РћС€РёР±РєР°",
-            MB_ICONERROR);
-    }
 
-    // РџРѕР»СѓС‡Р°РµРј СЂР°Р·РјРµСЂС‹ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
-    if (g_hBackground) {
-        BITMAP bm;
-        GetObject(g_hBackground, sizeof(bm), &bm);
-        g_imgWidth = bm.bmWidth;
-        g_imgHeight = bm.bmHeight;
-    }
 
-    WNDCLASSW wc = {};
-    wc.lpfnWndProc = WindowProc;
-    wc.hInstance = hInstance;
-    wc.lpszClassName = CLASS_NAME;
-    wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-    RegisterClassW(&wc);
+}
 
-    // РџРѕР»СѓС‡Р°РµРј СЂР°Р·РјРµСЂС‹ СЌРєСЂР°РЅР°
-    int screenWidth = GetSystemMetrics(SM_CXSCREEN);
-    int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-    g_winWidth = screenWidth; // РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј СЂР°Р·РјРµСЂС‹
-    g_winHeight = screenHeight;
+void LimitMoving() { // здесь буду ограничивать перемещение для игрока
 
-    HWND hwnd = CreateWindowExW(
-        0,
-        CLASS_NAME,
-        L"РЁРёСЂРѕРєРёРµ",
-        WS_POPUP | WS_VISIBLE,
-        0, 0, screenWidth, screenHeight,
-        NULL, NULL, hInstance, NULL
-    );
 
-    if (!hwnd) return 0;
 
-    UpdateWindow(hwnd);
+}
 
-    MSG msg = {};
-    while (GetMessage(&msg, NULL, 0, 0)) {
-        TranslateMessage(&msg);
-        DispatchMessageW(&msg);
-    }
+void ProcessMoving() { // Функця для реализации перемещения игрока
 
-    return 0;
+
+
+}
+
+void ShowBitmap(HDC hdc, HBITMAP hBitmapObject) {
+
+    HBITMAP hbm, hOldbm;
+    HDC hMemDC;
+    BITMAP bm;
+
+    hMemDC = CreateCompatibleDC(hdc); // Создаем контекст памяти, совместимый с контекстом отображения
+    hOldbm = (HBITMAP)SelectObject(hMemDC, hBitmapObject);// Выбираем изображение bitmap в контекст памяти
+
+}
+
+
+void ShowObject() { // демонстрирую обьекты 
+
+
+
+}
+
+void InitWindow() { // инициализация для рисования игры
+
+
+
+}
+
+
+int WINAPI wWinMain() {
+
+    InitWindow();
+    InitGame();
+
+
 }
 
 
@@ -169,25 +115,83 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 
 
 
-
-//#include <windows.h>
+//// ШАГ 1, создаем глобальные переменные для изображения
+//HBITMAP g_hBackground = NULL; // хэндл для фона
+//int g_winWidth = 0;            // Ширина окна
+//int g_winHeight = 0;           // Высота окна
+//int g_imgWidth = 0;            // Ширина изображения
+//int g_imgHeight = 0;           // Высота изображения
+//
+//
 //
 //LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 //
 //	switch (uMsg) {
 //
-//		case WM_DESTROY:
+//	case WM_DESTROY:
 //
-//			PostQuitMessage(0);
-//			return (0);
+//		// ШАГ 9 удаляем изображение при закрытии программы
+//		if (g_hBackground) {
+//			DeleteObject(g_hBackground);
+//			g_hBackground = NULL;
 //
-//		case WM_KEYDOWN:
+//		}
 //
-//			if (wParam == VK_ESCAPE) 
+//		PostQuitMessage(0);
+//		return (0);
 //
-//				DestroyWindow(hwnd);
+//	case WM_KEYDOWN:
 //
-//			return (0);
+//		if (wParam == VK_ESCAPE) 
+//
+//			DestroyWindow(hwnd);
+//
+//		return (0);
+//
+//		// ШАГ 6, делаем двойную буферизацию
+//	case WM_PAINT:
+//		PAINTSTRUCT ps;
+//		HDC hdc = BeginPaint(hwnd, &ps); // здесь начинаем рисовать
+//
+//		// Создаем сам буфер
+//		HDC hdcMem = CreateCompatibleDC(hdc);
+//		HBITMAP hbmBuffer = CreateCompatibleBitmap(hdc, g_winWidth, g_winHeight);
+//		HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, hbmBuffer);
+//
+//		// если будут ошибки мы будем заливать фон черным 
+//		RECT fullRect = { 0, 0, g_winWidth, g_winHeight };
+//		FillRect(hdcMem, &fullRect, (HBRUSH)GetStockObject(BLACK_BRUSH));
+//
+//		// ШАГ 7, расстягиваем изображение если оно загружено
+//		if (g_hBackground) {
+//			HDC hdcImg = CreateCompatibleDC(hdc);
+//			HBITMAP hbmOldImg = (HBITMAP)SelectObject(hdcImg, g_hBackground);
+//
+//			SetStretchBltMode(hdcMem, COLORONCOLOR);
+//			StretchBlt(
+//				hdcMem, 0, 0, g_winWidth, g_winHeight, // Куда и какого размера
+//				hdcImg, 0, 0, g_imgWidth, g_imgHeight,  // Откуда (оригинальный размер)
+//
+//				SRCCOPY                                 // Простое копирование
+//			);
+//
+//			// Убираем временные объекты
+//			SelectObject(hdcImg, hbmOldImg);
+//			DeleteDC(hdcImg);
+//
+//		}
+//
+//		// ШАГ 8, выводим буфер на экран и очищаем его ресурсы
+//		BitBlt(hdc, 0, 0, g_winWidth, g_winHeight, hdcMem, 0, 0, SRCCOPY);
+//
+//		// Очищаем 
+//		SelectObject(hdcMem, hbmOld);
+//		DeleteObject(hbmBuffer);
+//		DeleteDC(hdcMem);
+//
+//		EndPaint(hwnd, &ps); // заканчиваем рисовать
+//
+//		return (0);
 //
 //	}
 //
@@ -197,7 +201,30 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 //
 //int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow) {
 //
-//	const wchar_t CLASS_NAME[] = L"РЁРёСЂРѕРєРёРµ РґРѕ С…СѓСЏ";
+//	// ШАГ 2, загружаем изображение в формате bmp
+//	g_hBackground = (HBITMAP)LoadImageW(
+//		NULL,                   // Для загрузки из файла
+//		L"background.bmp", // ПУТЬ К ВАШЕМУ ФАЙЛУ
+//		IMAGE_BITMAP,           // Тип изображения
+//		0, 0,                   // Автоопределение размера
+//		LR_LOADFROMFILE         // Загрузка из файла
+//	);
+//
+//	// Проверка на загрузку изображения
+//	if (!g_hBackground) {
+//		MessageBox(NULL, L"Ошибка загрузки изображения", L"Ошибка", MB_ICONERROR);
+//
+//	}
+//	// ШАГ 3, получаем размер изображения
+//	else {
+//		BITMAP bm;
+//		GetObject(g_hBackground, sizeof(bm), &bm);
+//		g_imgWidth = bm.bmWidth; // Сохраняем ширину
+//		g_imgHeight = bm.bmHeight; // сохраняем высоту
+//
+//	}
+//
+//	const wchar_t CLASS_NAME[] = L"Широкие";
 //
 //	WNDCLASSW wc = {};
 //
@@ -208,13 +235,17 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 //
 //	RegisterClassW(&wc);
 //
+//	// ШАГ 4, записываем размер пользовательского экрана в глобальные переменные 
 //	int screenWidht = GetSystemMetrics(SM_CXSCREEN);
 //	int screenHeight = GetSystemMetrics(SM_CYSCREEN);
+//	g_winWidth = screenWidht; // Сохраняем размеры
+//	g_winHeight = screenHeight;
+//
 //
 //	HWND hwnd = CreateWindowExW
-//	(0,
+//	(   0,
 //		CLASS_NAME,
-//		L"РЁРёСЂРѕРєРёРµ ",
+//		L"Широкие ",
 //		WS_POPUP | WS_VISIBLE,
 //		0,
 //		0,
