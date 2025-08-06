@@ -52,7 +52,7 @@ void ShowBitmap(HDC hdc, HBITMAP hBitmapObject) {
     HDC hMemDC;
     BITMAP bm;
 
-    hMemDC = CreateCompatibleDC(hdc); // Создаем контекст памяти, совместимый с контекстом отображения
+    hMemDC = CreateCompatibleDC(hdc); // Создаем контекст памяти, совместимый с контекстом отображения 
     hOldbm = (HBITMAP)SelectObject(hMemDC, hBitmapObject);// Выбираем изображение bitmap в контекст памяти
 
 }
