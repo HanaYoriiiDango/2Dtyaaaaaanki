@@ -1,81 +1,33 @@
 #include <windows.h>
 //linker::system::subsystem  - Windows(/ SUBSYSTEM:WINDOWS) - ожидает wWinMain, а не main
-//configuration::advanced::character set - not set - хз зачем, но зато теперь могу обращаться к структурам
+//configuration::advanced::character set - not set - могу обращаться к структурам
 
-struct sprite {
-	float x, y, width, height, speed;
-	HBITMAP hBitmap;
-};
-
-sprite Enemy; 
-sprite Player;
-
+// ШАГ 1, структура окна
 struct {
-    HWND hWnd;//хэндл окна
-    HDC device_context, context;// два контекста (для буферизации)
-    int width, height;//сюдв сохраняем размеры окна 
+	    HWND hWnd;//хэндл окна
+	    int width, height;//сюда сохраняем размеры окна 
 } window;
 
-HBITMAP hBackground;// для фона 
+// ШАГ 4, создаем функцию для инициализации окна
+void InitWindow() {
 
-void InitGame() { // здесь буду иницализировать все свойства игровых обьектов и спрайьты
-
-    Enemy.hBitmap = (HBITMAP)LoadImageA(NULL, "pugalo.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    Player.hBitmap = (HBITMAP)LoadImageA(NULL, "hero.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    hBackground = (HBITMAP)LoadImageA(NULL, "Forest.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-
+	window.hWnd = CreateWindow("edit", 0, WS_POPUP | WS_VISIBLE | WS_MAXIMIZE, 0, 0, 0, 0, 0, 0, 0, 0);
 
 }
 
-void ProcessSound() { // здесь буду проигрывать музыку
+// ШАГ 2, задаем точку входа программы
+int APIENTRY wWinMain( // int WINAPI wWinMain() - тоже самое, но обычно используется для примеров
+    _In_ HINSTANCE hInstance,      // [in] Указатель только для чтения
+	_In_opt_ HINSTANCE hPrevInstance, // [in, optional] Может быть NULL
+	_In_ LPWSTR lpCmdLine,         // [in] Строка только для чтения
+	_In_ int nCmdShow)             // [in] Целое число только для чтения
+{
+	// Назначаем клавишу для завершения программы
+	while (!GetAsyncKeyState(VK_ESCAPE)) {
 
+		InitWindow();	
 
-
-
-}
-
-void LimitMoving() { // здесь буду ограничивать перемещение для игрока
-
-
-
-}
-
-void ProcessMoving() { // Функця для реализации перемещения игрока
-
-
-
-}
-
-void ShowBitmap(HDC hdc, HBITMAP hBitmapObject) {
-
-    HBITMAP hbm, hOldbm;
-    HDC hMemDC;
-    BITMAP bm;
-
-    hMemDC = CreateCompatibleDC(hdc); // Создаем контекст памяти, совместимый с контекстом отображения 
-    hOldbm = (HBITMAP)SelectObject(hMemDC, hBitmapObject);// Выбираем изображение bitmap в контекст памяти
-
-}
-
-
-void ShowObject() { // демонстрирую обьекты 
-
-
-
-}
-
-void InitWindow() { // инициализация для рисования игры
-
-
-
-}
-
-
-int WINAPI wWinMain() {
-
-    InitWindow();
-    InitGame();
-
+	}
 
 }
 
@@ -106,6 +58,159 @@ int WINAPI wWinMain() {
 
 
 
+
+
+
+
+
+
+
+
+
+
+//struct sprite {
+//	float x, y, width, height, speed;
+//	HBITMAP hBitmap;
+//    HDC frontDC, backDC;// два контекста (для буферизации)
+//};
+//
+//sprite Enemy; 
+//sprite Player;
+//
+//struct {
+//    HWND hWnd;//хэндл окна
+//    HBITMAP hBack; // бимап для заднего буфера
+//    HDC frontDC, backDC;// два контекста (для буферизации)
+//    int width, height;//сюдв сохраняем размеры окна 
+//} window;
+//
+//struct {
+//    bool action = true;
+//
+//} game;
+//
+//void InitGame() { // здесь буду иницализировать все свойства игровых обьектов и спрайьты
+//
+//    Enemy.hBitmap = (HBITMAP)LoadImageA(NULL, "pugalo.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+//    Player.hBitmap = (HBITMAP)LoadImageA(NULL, "hero.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+//    window.hBack = (HBITMAP)LoadImageA(NULL, "Forest.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+//
+//    Player.width = 100;
+//    Player.height = 100;
+//    Player.speed = 30;
+//    Player.x = window.width / 2;
+//    Player.y = window.height / 2;
+//
+//
+//
+//}
+//
+//void ProcessSound() { // здесь буду проигрывать музыку
+//
+//
+//
+//
+//}
+//
+//void LimitMoving() { // здесь буду ограничивать перемещение для игрока
+//
+//
+//
+//}
+//
+//void ProcessBild() { // Функця для назначения клавиш
+//
+//    // перемещение игрока на WASD
+//    if (GetAsyncKeyState('W')) Player.y -= Player.speed;
+//    if (GetAsyncKeyState('S')) Player.y += Player.speed;
+//    if (GetAsyncKeyState('A')) Player.x -= Player.speed;
+//    if (GetAsyncKeyState('D')) Player.x += Player.speed;
+//
+//    if (game.action && GetAsyncKeyState(VK_ESCAPE)) {
+//
+//        // программа завершается, если нажать escape 
+//        game.action = false;
+//
+//    }
+//
+//}
+//
+//void ShowWindow() {
+//
+//    // записываю размеры изображения 
+//    BITMAP bm;
+//    GetObject(window.hBack, sizeof(bm), &bm);
+//    int imgWidth = bm.bmWidth; // Сохраняем ширину
+//    int imgHeight = bm.bmHeight; // сохраняем высоту
+//
+//    window.frontDC = GetDC(window.hWnd);// Получаем контекст устройства (передний буфер)
+//
+//    window.backDC = CreateCompatibleDC(window.frontDC);// Создаем контекст в памяти (задний буфер)
+//
+//    HBITMAP hBackground = CreateCompatibleBitmap(window.frontDC, window.width, window.height); // Создаем битмап для заднего буфера
+//
+//    // по сути мы создаем сначало "холст" на котором рисуется само изображение, потом копируем его в буфер и вставляем между кадрами,
+//    // это нужно чтобы избежать мерцания, чтобы пользователь не видел сам процесс прорисовки 
+//
+//    SelectObject(window.backDC, window.hBack); // Привязываем битмап к контексту памяти
+//   
+//    StretchBlt(
+//        window.frontDC, 0, 0, window.width, window.height, // Куда и какого размера
+//        window.backDC, 0, 0, bm.bmWidth, bm.bmHeight,  // Откуда (оригинальный размер)
+//       SRCCOPY                                 // Простое копирование
+//
+//    );
+//
+//    DeleteObject(hBackground);
+//    DeleteObject(window.backDC);
+//    ReleaseDC(window.hWnd, window.frontDC);
+//
+//}
+//
+//void ShowObject() { // буферизацмя для спрайтов 
+//
+//
+//
+//
+//
+//}
+//
+//void InitWindow() { // инициализация для окна
+//
+//    SetProcessDPIAware();
+//    window.hWnd = CreateWindow("edit", 0, WS_POPUP | WS_VISIBLE | WS_MAXIMIZE, 0, 0, 0, 0, 0, 0, 0, 0);
+//
+//    RECT r; // Получаем размеры окна
+//    GetClientRect(window.hWnd, &r);
+//    window.width = r.right - r.left;
+//    window.height = r.bottom - r.top;
+//
+//    ShowWindow();
+//
+//}
+//
+//
+//
+//int WINAPI wWinMain(
+//     HINSTANCE hInstance,
+//     HINSTANCE hPrevInstance,
+//     LPWSTR    lpCmdLine,
+//     int       nCmdShow) {
+//
+//    InitGame();
+//    InitWindow();
+//
+//    // общий игровой цикл
+//    while (game.action) {
+//
+//        ProcessBild();
+//       
+//
+//
+//
+//    }
+//
+//}
 
 
 
@@ -274,3 +379,17 @@ int WINAPI wWinMain() {
 //	return (0);
 //
 //}
+
+//// ШАГ 3, создаем окно
+//window.hWnd = CreateWindow(
+//	"edit",                              // имя класса - уникального шаблона окна
+//	"My first window",					 // заголовок окна (не обязательно, можно просто 0)
+//	WS_POPUP | WS_VISIBLE | WS_MAXIMIZE, // стили окна: без рамки и заголовка | видимое окно | развернут на весь экран
+//	0, // позиция X (int)
+//	0, // позиция Y (int)
+//	0, // ширина (int)
+//	0, // высота (int)
+//	0, // родитель 
+//	0, // экземпляр 
+//	0, // меню / ID 
+//	0); // Доп. параметры (нет)
