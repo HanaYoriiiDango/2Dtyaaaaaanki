@@ -5,6 +5,8 @@
 // Структура окна
 struct {
 	    HWND hWnd;//хэндл окна - номерок
+		HBITMAP hBackground;
+		HDC frontDC, backDC;
 	    int width, height;//сюда сохраняем размеры окна 
 } window;
 
@@ -15,17 +17,57 @@ void InitWindow() { // Функция для инициализации окна
 
 	window.hWnd = CreateWindow("edit", 0, WS_POPUP | WS_VISIBLE | WS_MAXIMIZE, 0, 0, 0, 0, 0, 0, 0, 0);
 
+	//3 ШАГ, получаю размеры клиентской области 
+	RECT rect;
+	GetClientRect(window.hWnd, &rect);
+	window.width = rect.right - rect.left;
+	window.height = rect.bottom - rect.top;
+
 }
+
 
 // ШАГ 2, создаем функцию для инициализации всех объектов в игре
 void InitGame() { 
 
-	hBack = (HBITMAP)LoadImageA(
+	window.hBackground = (HBITMAP)LoadImageA(
 		NULL,  // Дескриптор экземляра приложения, указываем откуда загружать. NULL - загрузка из внешнего файла
 		"forest.bmp", // имя файла, относительный путь. Файл должен лежать рядом с exe
 		IMAGE_BITMAP, // Тип изображения (IMAGE_BITMAP, IMAGE_ICON, IMAGE_CURSOR)
 		0, 0,  // Желаемая ширина/высота (0 = оригинал)
-		LR_LOADFROMFILE); // Флаг загрузки fffff
+		LR_LOADFROMFILE); // Флаг загрузки 
+
+
+
+
+}
+
+// ШАГ 4, создаю функцию для отображения окна
+void ShowWindow() {
+
+	// Получаю размеры изображения 
+	BITMAP bm;
+	GetObject(window.hBackground, sizeof(bm), &bm);
+	int imgWidth = bm.bmWidth; // Сохраняем ширину
+	int imgHeight = bm.bmHeight; // сохраняем высоту
+
+	window.frontDC = GetDC(window.hWnd);
+
+	window.backDC = CreateCompatibleDC(window.frontDC);
+
+	HBITMAP hBack = CreateCompatibleBitmap(window.frontDC, window.width, window.height);
+
+	SelectObject(window.backDC, window.hBackground);
+
+	StretchBlt(
+	   window.frontDC, 0, 0, window.width, window.height, // Куда и какого размера
+	   window.backDC, 0, 0, bm.bmWidth, bm.bmHeight,  // Откуда (оригинальный размер)
+	   SRCCOPY                                 // Простое копирование
+	
+	);
+
+	DeleteObject(hBack);
+	DeleteObject(window.backDC);
+	ReleaseDC(window.hWnd, window.frontDC);
 
 }
 
@@ -36,10 +78,12 @@ int APIENTRY wWinMain( // int WINAPI wWinMain() - тоже самое, но об
 	_In_ LPWSTR lpCmdLine,         // комадная строка
 	_In_ int nCmdShow)             // флаги
 {
+	InitGame(); // инициализирую игровые объекты и спрайты
+	InitWindow(); // Инициализируем окно	
 	// Назначаем клавишу для завершения программы
 	while (!GetAsyncKeyState(VK_ESCAPE)) {
 
-		InitWindow(); // Инициализируем окно	
+		ShowWindow(); // Демонстрирую окно
 
 	}
 
