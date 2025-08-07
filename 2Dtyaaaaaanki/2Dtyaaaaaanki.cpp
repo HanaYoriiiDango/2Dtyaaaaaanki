@@ -2,30 +2,44 @@
 //linker::system::subsystem  - Windows(/ SUBSYSTEM:WINDOWS) - ожидает wWinMain, а не main
 //configuration::advanced::character set - not set - могу обращаться к структурам
 
-// ШАГ 1, структура окна
+// Структура окна
 struct {
-	    HWND hWnd;//хэндл окна
+	    HWND hWnd;//хэндл окна - номерок
 	    int width, height;//сюда сохраняем размеры окна 
 } window;
 
-// ШАГ 4, создаем функцию для инициализации окна
-void InitWindow() {
+// ШАГ 1 Создаем битмап для фона 
+HBITMAP hBack;
+
+void InitWindow() { // Функция для инициализации окна
 
 	window.hWnd = CreateWindow("edit", 0, WS_POPUP | WS_VISIBLE | WS_MAXIMIZE, 0, 0, 0, 0, 0, 0, 0, 0);
 
 }
 
-// ШАГ 2, задаем точку входа программы
+// ШАГ 2, создаем функцию для инициализации всех объектов в игре
+void InitGame() { 
+
+	hBack = (HBITMAP)LoadImageA(
+		NULL,  // Дескриптор экземляра приложения, указываем откуда загружать. NULL - загрузка из внешнего файла
+		"forest.bmp", // имя файла, относительный путь. Файл должен лежать рядом с exe
+		IMAGE_BITMAP, // Тип изображения (IMAGE_BITMAP, IMAGE_ICON, IMAGE_CURSOR)
+		0, 0,  // Желаемая ширина/высота (0 = оригинал)
+		LR_LOADFROMFILE); // Флаг загрузки
+
+}
+
+// Задаем точку входа программы
 int APIENTRY wWinMain( // int WINAPI wWinMain() - тоже самое, но обычно используется для примеров
-    _In_ HINSTANCE hInstance,      // [in] Указатель только для чтения
-	_In_opt_ HINSTANCE hPrevInstance, // [in, optional] Может быть NULL
-	_In_ LPWSTR lpCmdLine,         // [in] Строка только для чтения
-	_In_ int nCmdShow)             // [in] Целое число только для чтения
+    _In_ HINSTANCE hInstance,      // экземпляр программы
+	_In_opt_ HINSTANCE hPrevInstance, // прошлый экземпляр
+	_In_ LPWSTR lpCmdLine,         // комадная строка
+	_In_ int nCmdShow)             // флаги
 {
 	// Назначаем клавишу для завершения программы
 	while (!GetAsyncKeyState(VK_ESCAPE)) {
 
-		InitWindow();	
+		InitWindow(); // Инициализируем окно	
 
 	}
 
@@ -93,7 +107,7 @@ int APIENTRY wWinMain( // int WINAPI wWinMain() - тоже самое, но обычно использу
 //
 //    Enemy.hBitmap = (HBITMAP)LoadImageA(NULL, "pugalo.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
 //    Player.hBitmap = (HBITMAP)LoadImageA(NULL, "hero.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-//    window.hBack = (HBITMAP)LoadImageA(NULL, "Forest.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+//    window.hBack = (HBITMAP)LoadImageA(NULL, "forest.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
 //
 //    Player.width = 100;
 //    Player.height = 100;
