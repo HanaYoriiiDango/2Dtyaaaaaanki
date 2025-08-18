@@ -77,7 +77,7 @@ void ProcessInput()
       action = true;
 }
 
-void ShowBitmap(HDC hDC, int x, int y, int x1, int y1, HBITMAP hBitmapBall)
+void ShowBitmap(HDC hDC, int x, int y, int x1, int y1, HBITMAP hBitmapBall, bool alpha = false)
 {
     HBITMAP hbm, hOldbm;
     HDC hMemDC;
@@ -86,28 +86,38 @@ void ShowBitmap(HDC hDC, int x, int y, int x1, int y1, HBITMAP hBitmapBall)
     hMemDC = CreateCompatibleDC(hDC); // Создаем контекст памяти, совместимый с контекстом отображения
     hOldbm = (HBITMAP)SelectObject(hMemDC, hBitmapBall);// Выбираем изображение bitmap в контекст памяти
 
-    GetObject(hBitmapBall, sizeof(BITMAP), (LPSTR)&bm); // Определяем размеры изображения
-        
-    StretchBlt(hDC, x, y, x1, y1, hMemDC, 0, 0, bm.bmWidth, bm.bmHeight, SRCCOPY); // Рисуем изображение bitmap
+    if (hOldbm) // Если не было ошибок, продолжаем работу
+    {
+        GetObject(hBitmapBall, sizeof(BITMAP), (LPSTR)&bm); // Определяем размеры изображения
 
-    SelectObject(hMemDC, hOldbm);// Восстанавливаем контекст памяти
-  
+        if (alpha)
+        {
+            TransparentBlt(window.context, x, y, x1, y1, hMemDC, 0, 0, x1, y1, RGB(255, 255, 255));//все пиксели чбелого цвета будут интепретированы как прозрачные
+        }
+        else
+        {
+            StretchBlt(hDC, x, y, x1, y1, hMemDC, 0, 0, bm.bmWidth, bm.bmHeight, SRCCOPY); // Рисуем изображение bitmap
+        }
+
+        SelectObject(hMemDC, hOldbm);// Восстанавливаем контекст памяти
+    }
+
     DeleteDC(hMemDC); // Удаляем контекст памяти
 }
 
 void ShowRacketAndBall()
 {
-    ShowBitmap(window.context, 0, 0, window.width, window.height, hBack);//задний фон
-    ShowBitmap(window.context, racket.x, racket.y, racket.width, racket.height, racket.hBitmap);// ракетка игрока
+    ShowBitmap(window.context, 0, 0, window.width, window.height, hBack, false);//задний фон
+    ShowBitmap(window.context, racket.x, racket.y, racket.width, racket.height, racket.hBitmap, true);// ракетка игрока
 
 }
 
-void LimitRacket()
+void LimitHero()
 {
-    racket.x = max(racket.x, racket.width / 2.);//если коодината левого угла ракетки меньше нуля, присвоим ей ноль
-    racket.x = min(racket.x, window.width - racket.width / 2.);//аналогично для правого угла
-    racket.y = max(racket.y, racket.height / 2.);//если коодината левого угла ракетки меньше нуля, присвоим ей ноль
-    racket.y = min(racket.y, window.height - racket.height / 2.);//аналогично для правого угла
+    racket.x = max(racket.x, racket.width - racket.width);
+    racket.x = min(racket.x, window.width - racket.width);
+    racket.y = max(racket.y, racket.height / 0.3);
+    racket.y = min(racket.y, window.height - racket.height * 2.2);
 }
 
 void InitWindow()
@@ -134,8 +144,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     InitWindow();//здесь инициализируем все что нужно для рисования в окне
     InitGame();//здесь инициализируем переменные игры
-
-    //mciSendString(TEXT("play ..\\Debug\\music.mp3 repeat"), NULL, 0, NULL);
     ShowCursor(NULL);
 
     while (!GetAsyncKeyState(VK_ESCAPE))
@@ -146,7 +154,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
         Sleep(16);//ждем 16 милисекунд (1/количество кадров в секунду)
 
         ProcessInput();//опрос клавиатуры
-        LimitRacket();//проверяем, чтобы ракетка не убежала за экран
+        LimitHero();//проверяем, чтобы ракетка не убежала за экран
         
     }
 
