@@ -1,261 +1,153 @@
-#include <windows.h>
-//linker::system::subsystem  - Windows(/ SUBSYSTEM:WINDOWS) - ожидает wWinMain, а не main
-//configuration::advanced::character set - not set - могу обращаться к структурам
+п»ї#include <windows.h>
+//linker::system::subsystem  - Windows(/ SUBSYSTEM:WINDOWS) - РѕР¶РёРґР°РµС‚ wWinMain, Р° РЅРµ main
+//configuration::advanced::character set - not set - РјРѕРіСѓ РѕР±СЂР°С‰Р°С‚СЊСЃСЏ Рє СЃС‚СЂСѓРєС‚СѓСЂР°Рј 
+
+// СЃРµРєС†РёСЏ РґР°РЅРЅС‹С… РёРіСЂС‹  
+typedef struct {
+    float x, y, width, height, rad, dx, dy, speed;
+    HBITMAP hBitmap;//С…СЌРЅРґР» Рє СЃРїСЂР°Р№С‚Сѓ С€Р°СЂРёРєР° 
+} sprite;
+
+sprite racket;//СЂР°РєРµС‚РєР° РёРіСЂРѕРєР°
 
 struct {
-	HWND hWnd;//хэндл окна - номерок
-	HBITMAP hBackground, hBackBitmap; // хэндл для фонового изображения
-	int width, height;//сюда сохраняем размеры окна 
+    int score, balls;//РєРѕР»РёС‡РµСЃС‚РІРѕ РЅР°Р±СЂР°РЅРЅС‹С… РѕС‡РєРѕРІ Рё РѕСЃС‚Р°РІС€РёС…СЃСЏ "Р¶РёР·РЅРµР№"
+    bool action = false;//СЃРѕСЃС‚РѕСЏРЅРёРµ - РѕР¶РёРґР°РЅРёРµ (РёРіСЂРѕРє РґРѕР»Р¶РµРЅ РЅР°Р¶Р°С‚СЊ РїСЂРѕР±РµР») РёР»Рё РёРіСЂР°
+} game;
+
+struct {
+    HWND hWnd;//С…СЌРЅРґР» РѕРєРЅР°
+    HDC device_context, context;// РґРІР° РєРѕРЅС‚РµРєСЃС‚Р° СѓСЃС‚СЂРѕР№СЃС‚РІР° (РґР»СЏ Р±СѓС„РµСЂРёР·Р°С†РёРё)
+    int width, height;//СЃСЋРґР° СЃРѕС…СЂР°РЅРёРј СЂР°Р·РјРµСЂС‹ РѕРєРЅР° РєРѕС‚РѕСЂРѕРµ СЃРѕР·РґР°СЃС‚ РїСЂРѕРіСЂР°РјРјР°
 } window;
 
-void ShowWindow() { //  создаею функцию для демострации фона окна 
+HBITMAP hBack;// С…СЌРЅРґР» РґР»СЏ С„РѕРЅРѕРІРѕРіРѕ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
 
+//cРµРєС†РёСЏ РєРѕРґР°
 
-}
-
-void InitGame() { // создаю функцию для инициализации всех объектов в игре
-
-	// С помощью функции LoadImageA загружаю битмап для фона/спрайтоыв
-	window.hBackground = (HBITMAP)LoadImageA(
-		NULL,  // Дескриптор экземляра приложения, указываем откуда загружать. NULL - загрузка из внешнего файла
-		"forest.bmp", // имя файла, относительный путь. Файл должен лежать рядом с exe
-		IMAGE_BITMAP, // Тип изображения (IMAGE_BITMAP, IMAGE_ICON, IMAGE_CURSOR)
-		0, 0,  // Желаемая ширина/высота (0 = оригинал)
-		LR_LOADFROMFILE); // Флаг загрузки 
-
-}
-
-void InitWindow() { // Функция для инициализации окна
-
-	window.hWnd = CreateWindow("edit", 0, WS_POPUP | WS_VISIBLE | WS_MAXIMIZE, 0, 0, 0, 0, 0, 0, 0, 0);
-
-}
-
-int APIENTRY wWinMain( // int WINAPI wWinMain() - тоже самое, но обычно используется для примеров
-	_In_ HINSTANCE hInstance,      // экземпляр программы
-	_In_opt_ HINSTANCE hPrevInstance, // прошлый экземпляр
-	_In_ LPWSTR lpCmdLine,         // комадная строка
-	_In_ int nCmdShow)             // флаги
+void InitGame()
 {
-	InitGame(); // инициализирую игровые объекты
-	InitWindow(); // Инициализирую окно
-	ShowCursor(NULL); // убрал курсор
+    //РІ СЌС‚РѕР№ СЃРµРєС†РёРё Р·Р°РіСЂСѓР¶Р°РµРј СЃРїСЂР°Р№С‚С‹ СЃ РїРѕРјРѕС‰СЊСЋ С„СѓРЅРєС†РёР№ gdi
+    //РїСѓС‚Рё РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅС‹Рµ - С„Р°Р№Р»С‹ РґРѕР»Р¶РЅС‹ Р»РµР¶Р°С‚СЊ СЂСЏРґРѕРј СЃ .exe 
+    //СЂРµР·СѓР»СЊС‚Р°С‚ СЂР°Р±РѕС‚С‹ LoadImageA СЃРѕС…СЂР°РЅСЏРµС‚ РІ С…СЌРЅРґР»Р°С… Р±РёС‚РјР°РїРѕРІ, СЂРёСЃРѕРІР°РЅРёРµ СЃРїСЂР°Р№С‚РѕРІ Р±СѓРґРµС‚ РїСЂРѕРёР·РѕРІРґРёС‚СЊСЃСЏ СЃ РїРѕРјРѕС‰СЊСЋ СЌС‚РёС… С…СЌРЅРґР»РѕРІ
+    racket.hBitmap = (HBITMAP)LoadImageA(NULL, "hero.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    hBack = (HBITMAP)LoadImageA(NULL, "forest.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    //------------------------------------------------------
 
-	while (!GetAsyncKeyState(VK_ESCAPE)) { // Основной игровой цикл
+    racket.width = 200;
+    racket.height = 200;
+    racket.speed = 100;//СЃРєРѕСЂРѕСЃС‚СЊ РїРµСЂРµРјРµС‰РµРЅРёСЏ СЂР°РєРµС‚РєРё
+    racket.x = window.width / 2.;//СЂР°РєРµС‚РєР° РїРѕСЃРµСЂРµРґРёРЅРµ РѕРєРЅР°
+    racket.y = window.height / 2;
 
-		ShowWindow(); //рисую фон окна
+    game.score = 0;
+    game.balls = 9;
 
-
-	}
 }
 
+void ShowScore()
+{
+    //РїРѕРёРіСЂР°РµРј С€СЂРёС„С‚Р°РјРё Рё С†РІРµС‚Р°РјРё
+    SetTextColor(window.context, RGB(160, 160, 160));
+    SetBkColor(window.context, RGB(0, 0, 0));
+    SetBkMode(window.context, TRANSPARENT);
+    auto hFont = CreateFont(70, 0, 0, 0, FW_BOLD, 0, 0, 0, 0, 0, 0, 2, 0, "CALIBRI");
+    auto hTmp = (HFONT)SelectObject(window.context, hFont);
 
+    char txt[32];//Р±СѓС„РµСЂ РґР»СЏ С‚РµРєСЃС‚Р°
+    _itoa_s(game.score, txt, 10);//РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ С‡РёСЃР»РѕРІРѕР№ РїРµСЂРµРјРµРЅРЅРѕР№ РІ С‚РµРєСЃС‚. С‚РµРєСЃС‚ РѕРєР°Р¶РµС‚СЃСЏ РІ РїРµСЂРµРјРµРЅРЅРѕР№ txt
+    TextOutA(window.context, 10, 10, "Score", 5);
+    TextOutA(window.context, 200, 10, (LPCSTR)txt, strlen(txt));
 
+    _itoa_s(game.balls, txt, 10);
+    TextOutA(window.context, 10, 100, "Balls", 5);
+    TextOutA(window.context, 200, 100, (LPCSTR)txt, strlen(txt));
+}
 
+void ProcessInput()
+{
+    bool action = false;
 
+    if (GetAsyncKeyState('W')) racket.y -= racket.speed;
+    if (GetAsyncKeyState('A')) racket.x -= racket.speed;
+    if (GetAsyncKeyState('S')) racket.y += racket.speed;
+    if (GetAsyncKeyState('D')) racket.x += racket.speed;
+    if (GetAsyncKeyState('S') && !action)
+        
+      action = true;
+}
 
+void ShowBitmap(HDC hDC, int x, int y, int x1, int y1, HBITMAP hBitmapBall)
+{
+    HBITMAP hbm, hOldbm;
+    HDC hMemDC;
+    BITMAP bm;
 
+    hMemDC = CreateCompatibleDC(hDC); // РЎРѕР·РґР°РµРј РєРѕРЅС‚РµРєСЃС‚ РїР°РјСЏС‚Рё, СЃРѕРІРјРµСЃС‚РёРјС‹Р№ СЃ РєРѕРЅС‚РµРєСЃС‚РѕРј РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ
+    hOldbm = (HBITMAP)SelectObject(hMemDC, hBitmapBall);// Р’С‹Р±РёСЂР°РµРј РёР·РѕР±СЂР°Р¶РµРЅРёРµ bitmap РІ РєРѕРЅС‚РµРєСЃС‚ РїР°РјСЏС‚Рё
 
+    GetObject(hBitmapBall, sizeof(BITMAP), (LPSTR)&bm); // РћРїСЂРµРґРµР»СЏРµРј СЂР°Р·РјРµСЂС‹ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
+        
+    StretchBlt(hDC, x, y, x1, y1, hMemDC, 0, 0, bm.bmWidth, bm.bmHeight, SRCCOPY); // Р РёСЃСѓРµРј РёР·РѕР±СЂР°Р¶РµРЅРёРµ bitmap
 
+    SelectObject(hMemDC, hOldbm);// Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј РєРѕРЅС‚РµРєСЃС‚ РїР°РјСЏС‚Рё
+  
+    DeleteDC(hMemDC); // РЈРґР°Р»СЏРµРј РєРѕРЅС‚РµРєСЃС‚ РїР°РјСЏС‚Рё
+}
 
+void ShowRacketAndBall()
+{
+    ShowBitmap(window.context, 0, 0, window.width, window.height, hBack);//Р·Р°РґРЅРёР№ С„РѕРЅ
+    ShowBitmap(window.context, racket.x, racket.y, racket.width, racket.height, racket.hBitmap);// СЂР°РєРµС‚РєР° РёРіСЂРѕРєР°
 
+}
 
+void LimitRacket()
+{
+    racket.x = max(racket.x, racket.width / 2.);//РµСЃР»Рё РєРѕРѕРґРёРЅР°С‚Р° Р»РµРІРѕРіРѕ СѓРіР»Р° СЂР°РєРµС‚РєРё РјРµРЅСЊС€Рµ РЅСѓР»СЏ, РїСЂРёСЃРІРѕРёРј РµР№ РЅРѕР»СЊ
+    racket.x = min(racket.x, window.width - racket.width / 2.);//Р°РЅР°Р»РѕРіРёС‡РЅРѕ РґР»СЏ РїСЂР°РІРѕРіРѕ СѓРіР»Р°
+    racket.y = max(racket.y, racket.height / 2.);//РµСЃР»Рё РєРѕРѕРґРёРЅР°С‚Р° Р»РµРІРѕРіРѕ СѓРіР»Р° СЂР°РєРµС‚РєРё РјРµРЅСЊС€Рµ РЅСѓР»СЏ, РїСЂРёСЃРІРѕРёРј РµР№ РЅРѕР»СЊ
+    racket.y = min(racket.y, window.height - racket.height / 2.);//Р°РЅР°Р»РѕРіРёС‡РЅРѕ РґР»СЏ РїСЂР°РІРѕРіРѕ СѓРіР»Р°
+}
 
+void InitWindow()
+{
+    SetProcessDPIAware();
+    window.hWnd = CreateWindow("edit", 0, WS_POPUP | WS_VISIBLE | WS_MAXIMIZE, 0, 0, 0, 0, 0, 0, 0, 0);
 
+    RECT r;
+    GetClientRect(window.hWnd, &r);
+    window.device_context = GetDC(window.hWnd);//РёР· С…СЌРЅРґР»Р° РѕРєРЅР° РґРѕСЃС‚Р°РµРј С…СЌРЅРґР» РєРѕРЅС‚РµРєСЃС‚Р° СѓСЃС‚СЂРѕР№СЃС‚РІР° РґР»СЏ СЂРёСЃРѕРІР°РЅРёСЏ
+    window.width = r.right - r.left;//РѕРїСЂРµРґРµР»СЏРµРј СЂР°Р·РјРµСЂС‹ Рё СЃРѕС…СЂР°РЅСЏРµРј
+    window.height = r.bottom - r.top;
+    window.context = CreateCompatibleDC(window.device_context);//РІС‚РѕСЂРѕР№ Р±СѓС„РµСЂ
+    SelectObject(window.context, CreateCompatibleBitmap(window.device_context, window.width, window.height));//РїСЂРёРІСЏР·С‹РІР°РµРј РѕРєРЅРѕ Рє РєРѕРЅС‚РµРєСЃС‚Сѓ
+    GetClientRect(window.hWnd, &r);
 
+}
 
+int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
+    _In_opt_ HINSTANCE hPrevInstance,
+    _In_ LPWSTR    lpCmdLine,
+    _In_ int       nCmdShow)
+ {
 
+    InitWindow();//Р·РґРµСЃСЊ РёРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РІСЃРµ С‡С‚Рѕ РЅСѓР¶РЅРѕ РґР»СЏ СЂРёСЃРѕРІР°РЅРёСЏ РІ РѕРєРЅРµ
+    InitGame();//Р·РґРµСЃСЊ РёРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РїРµСЂРµРјРµРЅРЅС‹Рµ РёРіСЂС‹
 
+    //mciSendString(TEXT("play ..\\Debug\\music.mp3 repeat"), NULL, 0, NULL);
+    ShowCursor(NULL);
 
+    while (!GetAsyncKeyState(VK_ESCAPE))
+    {
+        ShowRacketAndBall();//СЂРёСЃСѓРµРј С„РѕРЅ, СЂР°РєРµС‚РєСѓ Рё С€Р°СЂРёРє
+        ShowScore();//СЂРёСЃСѓРµРј РѕС‡РёРє Рё Р¶РёР·РЅРё
+        BitBlt(window.device_context, 0, 0, window.width, window.height, window.context, 0, 0, SRCCOPY);//РєРѕРїРёСЂСѓРµРј Р±СѓС„РµСЂ РІ РѕРєРЅРѕ
+        Sleep(16);//Р¶РґРµРј 16 РјРёР»РёСЃРµРєСѓРЅРґ (1/РєРѕР»РёС‡РµСЃС‚РІРѕ РєР°РґСЂРѕРІ РІ СЃРµРєСѓРЅРґСѓ)
 
+        ProcessInput();//РѕРїСЂРѕСЃ РєР»Р°РІРёР°С‚СѓСЂС‹
+        LimitRacket();//РїСЂРѕРІРµСЂСЏРµРј, С‡С‚РѕР±С‹ СЂР°РєРµС‚РєР° РЅРµ СѓР±РµР¶Р°Р»Р° Р·Р° СЌРєСЂР°РЅ
+        
+    }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//// ШАГ 1, создаем глобальные переменные для изображения
-//HBITMAP g_hBackground = NULL; // хэндл для фона
-//int g_winWidth = 0;            // Ширина окна
-//int g_winHeight = 0;           // Высота окна
-//int g_imgWidth = 0;            // Ширина изображения
-//int g_imgHeight = 0;           // Высота изображения
-//
-//
-//
-//LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-//
-//	switch (uMsg) {
-//
-//	case WM_DESTROY:
-//
-//		// ШАГ 9 удаляем изображение при закрытии программы
-//		if (g_hBackground) {
-//			DeleteObject(g_hBackground);
-//			g_hBackground = NULL;
-//
-//		}
-//
-//		PostQuitMessage(0);
-//		return (0);
-//
-//	case WM_KEYDOWN:
-//
-//		if (wParam == VK_ESCAPE) 
-//
-//			DestroyWindow(hwnd);
-//
-//		return (0);
-//
-//		// ШАГ 6, делаем двойную буферизацию
-//	case WM_PAINT:
-//		PAINTSTRUCT ps;
-//		HDC hdc = BeginPaint(hwnd, &ps); // здесь начинаем рисовать
-//
-//		// Создаем сам буфер
-//		HDC hdcMem = CreateCompatibleDC(hdc);
-//		HBITMAP hbmBuffer = CreateCompatibleBitmap(hdc, g_winWidth, g_winHeight);
-//		HBITMAP hbmOld = (HBITMAP)SelectObject(hdcMem, hbmBuffer);
-//
-//		// если будут ошибки мы будем заливать фон черным 
-//		RECT fullRect = { 0, 0, g_winWidth, g_winHeight };
-//		FillRect(hdcMem, &fullRect, (HBRUSH)GetStockObject(BLACK_BRUSH));
-//
-//		// ШАГ 7, расстягиваем изображение если оно загружено
-//		if (g_hBackground) {
-//			HDC hdcImg = CreateCompatibleDC(hdc);
-//			HBITMAP hbmOldImg = (HBITMAP)SelectObject(hdcImg, g_hBackground);
-//
-//			SetStretchBltMode(hdcMem, COLORONCOLOR);
-//			StretchBlt(
-//				hdcMem, 0, 0, g_winWidth, g_winHeight, // Куда и какого размера
-//				hdcImg, 0, 0, g_imgWidth, g_imgHeight,  // Откуда (оригинальный размер)
-//
-//				SRCCOPY                                 // Простое копирование
-//			);
-//
-//			// Убираем временные объекты
-//			SelectObject(hdcImg, hbmOldImg);
-//			DeleteDC(hdcImg);
-//
-//		}
-//
-//		// ШАГ 8, выводим буфер на экран и очищаем его ресурсы
-//		BitBlt(hdc, 0, 0, g_winWidth, g_winHeight, hdcMem, 0, 0, SRCCOPY);
-//
-//		// Очищаем 
-//		SelectObject(hdcMem, hbmOld);
-//		DeleteObject(hbmBuffer);
-//		DeleteDC(hdcMem);
-//
-//		EndPaint(hwnd, &ps); // заканчиваем рисовать
-//
-//		return (0);
-//
-//	}
-//
-//	return DefWindowProcW(hwnd, uMsg, wParam, lParam);
-//
-//}
-//
-//int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow) {
-//
-//	// ШАГ 2, загружаем изображение в формате bmp
-//	g_hBackground = (HBITMAP)LoadImageW(
-//		NULL,                   // Для загрузки из файла
-//		L"background.bmp", // ПУТЬ К ВАШЕМУ ФАЙЛУ
-//		IMAGE_BITMAP,           // Тип изображения
-//		0, 0,                   // Автоопределение размера
-//		LR_LOADFROMFILE         // Загрузка из файла
-//	);
-//
-//	// Проверка на загрузку изображения
-//	if (!g_hBackground) {
-//		MessageBox(NULL, L"Ошибка загрузки изображения", L"Ошибка", MB_ICONERROR);
-//
-//	}
-//	// ШАГ 3, получаем размер изображения
-//	else {
-//		BITMAP bm;
-//		GetObject(g_hBackground, sizeof(bm), &bm);
-//		g_imgWidth = bm.bmWidth; // Сохраняем ширину
-//		g_imgHeight = bm.bmHeight; // сохраняем высоту
-//
-//	}
-//
-//	const wchar_t CLASS_NAME[] = L"Широкие";
-//
-//	WNDCLASSW wc = {};
-//
-//	wc.lpfnWndProc = WindowProc;
-//	wc.hInstance = hInstance;
-//	wc.lpszClassName = CLASS_NAME;
-//	wc.hCursor = LoadCursor(NULL, IDC_ARROW);
-//
-//	RegisterClassW(&wc);
-//
-//	// ШАГ 4, записываем размер пользовательского экрана в глобальные переменные 
-//	int screenWidht = GetSystemMetrics(SM_CXSCREEN);
-//	int screenHeight = GetSystemMetrics(SM_CYSCREEN);
-//	g_winWidth = screenWidht; // Сохраняем размеры
-//	g_winHeight = screenHeight;
-//
-//
-//	HWND hwnd = CreateWindowExW
-//	(   0,
-//		CLASS_NAME,
-//		L"Широкие ",
-//		WS_POPUP | WS_VISIBLE,
-//		0,
-//		0,
-//		screenWidht,
-//		screenHeight,
-//		0,
-//		0,
-//		hInstance,
-//		0
-//	);
-//		
-//	if (hwnd == NULL) return (0);
-//
-//
-//	UpdateWindow(hwnd);
-//
-//	MSG msg = {};
-//
-//	while (GetMessage(&msg, NULL, 0, 0)) {
-//
-//		TranslateMessage(&msg);
-//		DispatchMessageW(&msg);
-//
-//	}
-//
-//	return (0);
-//
-//}
-
-//// ШАГ 3, создаем окно
-//window.hWnd = CreateWindow(
-//	"edit",                              // имя класса - уникального шаблона окна
-//	"My first window",					 // заголовок окна (не обязательно, можно просто 0)
-//	WS_POPUP | WS_VISIBLE | WS_MAXIMIZE, // стили окна: без рамки и заголовка | видимое окно | развернут на весь экран
-//	0, // позиция X (int)
-//	0, // позиция Y (int)
-//	0, // ширина (int)
-//	0, // высота (int)
-//	0, // родитель 
-//	0, // экземпляр 
-//	0, // меню / ID 
-//	0); // Доп. параметры (нет)
+}
