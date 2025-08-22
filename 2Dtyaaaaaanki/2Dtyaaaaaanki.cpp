@@ -1,44 +1,47 @@
-п»ї#include <windows.h>
-//linker::system::subsystem  - Windows(/ SUBSYSTEM:WINDOWS) - РѕР¶РёРґР°РµС‚ wWinMain, Р° РЅРµ main
-//configuration::advanced::character set - not set - РјРѕРіСѓ РѕР±СЂР°С‰Р°С‚СЊСЃСЏ Рє СЃС‚СЂСѓРєС‚СѓСЂР°Рј 
+#include <windows.h>
+#include <wingdi.h> 
+//linker::system::subsystem  - Windows(/ SUBSYSTEM:WINDOWS) - ожидает wWinMain, а не main
+//configuration::advanced::character set - not set - могу обращаться к структурам 
+//linker::input::additional dependensies Msimg32.lib; Winmm.lib
 
-// СЃРµРєС†РёСЏ РґР°РЅРЅС‹С… РёРіСЂС‹  
+
+// секция данных игры  
 typedef struct {
     float x, y, width, height, rad, dx, dy, speed;
-    HBITMAP hBitmap;//С…СЌРЅРґР» Рє СЃРїСЂР°Р№С‚Сѓ С€Р°СЂРёРєР° 
+    HBITMAP hBitmap;//хэндл к спрайту шарика 
 } sprite;
 
-sprite racket;//СЂР°РєРµС‚РєР° РёРіСЂРѕРєР°
+sprite Hero;//ракетка игрока
 
 struct {
-    int score, balls;//РєРѕР»РёС‡РµСЃС‚РІРѕ РЅР°Р±СЂР°РЅРЅС‹С… РѕС‡РєРѕРІ Рё РѕСЃС‚Р°РІС€РёС…СЃСЏ "Р¶РёР·РЅРµР№"
-    bool action = false;//СЃРѕСЃС‚РѕСЏРЅРёРµ - РѕР¶РёРґР°РЅРёРµ (РёРіСЂРѕРє РґРѕР»Р¶РµРЅ РЅР°Р¶Р°С‚СЊ РїСЂРѕР±РµР») РёР»Рё РёРіСЂР°
+    int score, balls;//количество набранных очков и оставшихся "жизней"
+    bool action = false;//состояние - ожидание (игрок должен нажать пробел) или игра
 } game;
 
 struct {
-    HWND hWnd;//С…СЌРЅРґР» РѕРєРЅР°
-    HDC device_context, context;// РґРІР° РєРѕРЅС‚РµРєСЃС‚Р° СѓСЃС‚СЂРѕР№СЃС‚РІР° (РґР»СЏ Р±СѓС„РµСЂРёР·Р°С†РёРё)
-    int width, height;//СЃСЋРґР° СЃРѕС…СЂР°РЅРёРј СЂР°Р·РјРµСЂС‹ РѕРєРЅР° РєРѕС‚РѕСЂРѕРµ СЃРѕР·РґР°СЃС‚ РїСЂРѕРіСЂР°РјРјР°
+    HWND hWnd;//хэндл окна
+    HDC device_context, context;// два контекста устройства (для буферизации)
+    int width, height;//сюда сохраним размеры окна которое создаст программа
 } window;
 
-HBITMAP hBack;// С…СЌРЅРґР» РґР»СЏ С„РѕРЅРѕРІРѕРіРѕ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
+HBITMAP hBack;// хэндл для фонового изображения
 
-//cРµРєС†РёСЏ РєРѕРґР°
+//cекция кода
 
 void InitGame()
 {
-    //РІ СЌС‚РѕР№ СЃРµРєС†РёРё Р·Р°РіСЂСѓР¶Р°РµРј СЃРїСЂР°Р№С‚С‹ СЃ РїРѕРјРѕС‰СЊСЋ С„СѓРЅРєС†РёР№ gdi
-    //РїСѓС‚Рё РѕС‚РЅРѕСЃРёС‚РµР»СЊРЅС‹Рµ - С„Р°Р№Р»С‹ РґРѕР»Р¶РЅС‹ Р»РµР¶Р°С‚СЊ СЂСЏРґРѕРј СЃ .exe 
-    //СЂРµР·СѓР»СЊС‚Р°С‚ СЂР°Р±РѕС‚С‹ LoadImageA СЃРѕС…СЂР°РЅСЏРµС‚ РІ С…СЌРЅРґР»Р°С… Р±РёС‚РјР°РїРѕРІ, СЂРёСЃРѕРІР°РЅРёРµ СЃРїСЂР°Р№С‚РѕРІ Р±СѓРґРµС‚ РїСЂРѕРёР·РѕРІРґРёС‚СЊСЃСЏ СЃ РїРѕРјРѕС‰СЊСЋ СЌС‚РёС… С…СЌРЅРґР»РѕРІ e
-    racket.hBitmap = (HBITMAP)LoadImageA(NULL, "hero.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    //в этой секции загружаем спрайты с помощью функций gdi
+    //пути относительные - файлы должны лежать рядом с .exe 
+    //результат работы LoadImageA сохраняет в хэндлах битмапов, рисование спрайтов будет произовдиться с помощью этих хэндлов e
+    Hero.hBitmap = (HBITMAP)LoadImageA(NULL, "hero1.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
     hBack = (HBITMAP)LoadImageA(NULL, "forest.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
     //------------------------------------------------------
 
-    racket.width = 200;
-    racket.height = 200;
-    racket.speed = 100;//СЃРєРѕСЂРѕСЃС‚СЊ РїРµСЂРµРјРµС‰РµРЅРёСЏ СЂР°РєРµС‚РєРё
-    racket.x = window.width / 2.;//СЂР°РєРµС‚РєР° РїРѕСЃРµСЂРµРґРёРЅРµ РѕРєРЅР°
-    racket.y = window.height / 2;
+    Hero.width = 300;
+    Hero.height = 300;
+    Hero.speed = 45;//скорость перемещения ракетки
+    Hero.x = window.width / 2.;//ракетка посередине окна
+    Hero.y = window.height / 2;
 
     game.score = 0;
     game.balls = 9;
@@ -47,15 +50,15 @@ void InitGame()
 
 void ShowScore()
 {
-    //РїРѕРёРіСЂР°РµРј С€СЂРёС„С‚Р°РјРё Рё С†РІРµС‚Р°РјРё
+    //поиграем шрифтами и цветами
     SetTextColor(window.context, RGB(160, 160, 160));
     SetBkColor(window.context, RGB(0, 0, 0));
     SetBkMode(window.context, TRANSPARENT);
     auto hFont = CreateFont(70, 0, 0, 0, FW_BOLD, 0, 0, 0, 0, 0, 0, 2, 0, "CALIBRI");
     auto hTmp = (HFONT)SelectObject(window.context, hFont);
 
-    char txt[32];//Р±СѓС„РµСЂ РґР»СЏ С‚РµРєСЃС‚Р°
-    _itoa_s(game.score, txt, 10);//РїСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ С‡РёСЃР»РѕРІРѕР№ РїРµСЂРµРјРµРЅРЅРѕР№ РІ С‚РµРєСЃС‚. С‚РµРєСЃС‚ РѕРєР°Р¶РµС‚СЃСЏ РІ РїРµСЂРµРјРµРЅРЅРѕР№ txt
+    char txt[32];//буфер для текста
+    _itoa_s(game.score, txt, 10);//преобразование числовой переменной в текст. текст окажется в переменной txt
     TextOutA(window.context, 10, 10, "Score", 5);
     TextOutA(window.context, 200, 10, (LPCSTR)txt, strlen(txt));
 
@@ -66,15 +69,12 @@ void ShowScore()
 
 void ProcessInput()
 {
-    bool action = false;
 
-    if (GetAsyncKeyState('W')) racket.y -= racket.speed;
-    if (GetAsyncKeyState('A')) racket.x -= racket.speed;
-    if (GetAsyncKeyState('S')) racket.y += racket.speed;
-    if (GetAsyncKeyState('D')) racket.x += racket.speed;
-    if (GetAsyncKeyState('S') && !action)
+    if (GetAsyncKeyState('W')) Hero.y -= Hero.speed;
+    if (GetAsyncKeyState('A')) Hero.x -= Hero.speed;
+    if (GetAsyncKeyState('S')) Hero.y += Hero.speed;
+    if (GetAsyncKeyState('D')) Hero.x += Hero.speed;
         
-      action = true;
 }
 
 void ShowBitmap(HDC hDC, int x, int y, int x1, int y1, HBITMAP hBitmapBall, bool alpha = false)
@@ -83,41 +83,42 @@ void ShowBitmap(HDC hDC, int x, int y, int x1, int y1, HBITMAP hBitmapBall, bool
     HDC hMemDC;
     BITMAP bm;
 
-    hMemDC = CreateCompatibleDC(hDC); // РЎРѕР·РґР°РµРј РєРѕРЅС‚РµРєСЃС‚ РїР°РјСЏС‚Рё, СЃРѕРІРјРµСЃС‚РёРјС‹Р№ СЃ РєРѕРЅС‚РµРєСЃС‚РѕРј РѕС‚РѕР±СЂР°Р¶РµРЅРёСЏ
-    hOldbm = (HBITMAP)SelectObject(hMemDC, hBitmapBall);// Р’С‹Р±РёСЂР°РµРј РёР·РѕР±СЂР°Р¶РµРЅРёРµ bitmap РІ РєРѕРЅС‚РµРєСЃС‚ РїР°РјСЏС‚Рё
+    hMemDC = CreateCompatibleDC(hDC); // Создаем контекст памяти, совместимый с контекстом отображения
+    hOldbm = (HBITMAP)SelectObject(hMemDC, hBitmapBall);// Выбираем изображение bitmap в контекст памяти
 
-    if (hOldbm) // Р•СЃР»Рё РЅРµ Р±С‹Р»Рѕ РѕС€РёР±РѕРє, РїСЂРѕРґРѕР»Р¶Р°РµРј СЂР°Р±РѕС‚Сѓ
+    if (hOldbm) // Если не было ошибок, продолжаем работу
     {
-        GetObject(hBitmapBall, sizeof(BITMAP), (LPSTR)&bm); // РћРїСЂРµРґРµР»СЏРµРј СЂР°Р·РјРµСЂС‹ РёР·РѕР±СЂР°Р¶РµРЅРёСЏ
+        GetObject(hBitmapBall, sizeof(BITMAP), (LPSTR)&bm); // Определяем размеры изображения
 
         if (alpha)
         {
-            TransparentBlt(window.context, x, y, x1, y1, hMemDC, 0, 0, x1, y1, RGB(255, 255, 255));//РІСЃРµ РїРёРєСЃРµР»Рё С‡Р±РµР»РѕРіРѕ С†РІРµС‚Р° Р±СѓРґСѓС‚ РёРЅС‚РµРїСЂРµС‚РёСЂРѕРІР°РЅС‹ РєР°Рє РїСЂРѕР·СЂР°С‡РЅС‹Рµ
+            TransparentBlt(window.context, x, y, x1, y1, hMemDC, 0, 0, x1, y1, RGB(255, 255, 255));//все пиксели белого цвета будут интепретированы как прозрачные
         }
         else
         {
-            StretchBlt(hDC, x, y, x1, y1, hMemDC, 0, 0, bm.bmWidth, bm.bmHeight, SRCCOPY); // Р РёСЃСѓРµРј РёР·РѕР±СЂР°Р¶РµРЅРёРµ bitmap
+            StretchBlt(hDC, x, y, x1, y1, hMemDC, 0, 0, bm.bmWidth, bm.bmHeight, SRCCOPY); // Рисуем изображение bitmap
         }
 
-        SelectObject(hMemDC, hOldbm);// Р’РѕСЃСЃС‚Р°РЅР°РІР»РёРІР°РµРј РєРѕРЅС‚РµРєСЃС‚ РїР°РјСЏС‚Рё
+        SelectObject(hMemDC, hOldbm);// Восстанавливаем контекст памяти
     }
 
-    DeleteDC(hMemDC); // РЈРґР°Р»СЏРµРј РєРѕРЅС‚РµРєСЃС‚ РїР°РјСЏС‚Рё
+    DeleteDC(hMemDC); // Удаляем контекст памяти
 }
 
 void ShowRacketAndBall()
 {
-    ShowBitmap(window.context, 0, 0, window.width, window.height, hBack, false);//Р·Р°РґРЅРёР№ С„РѕРЅ
-    ShowBitmap(window.context, racket.x, racket.y, racket.width, racket.height, racket.hBitmap, true);// СЂР°РєРµС‚РєР° РёРіСЂРѕРєР°
+    ShowBitmap(window.context, 0, 0, window.width, window.height, hBack, false);//задний фон
+    ShowBitmap(window.context, Hero.x, Hero.y, Hero.width, Hero.height, Hero.hBitmap, true);// ракетка игрока
 
 }
 
 void LimitHero()
 {
-    racket.x = max(racket.x, racket.width - racket.width);
-    racket.x = min(racket.x, window.width - racket.width);
-    racket.y = max(racket.y, racket.height / 0.3);
-    racket.y = min(racket.y, window.height - racket.height * 2.2);
+    Hero.x = max(Hero.x, window.width / 300); // максимально справа
+    Hero.x = min(Hero.x, window.width * 0.9); // минимально справа
+    //Hero.y = max(Hero.y, window.height / 1.4); // максимально сверху
+    //Hero.y = min(Hero.y, window.height / 1.6); // минимально снизу
+
 }
 
 void InitWindow()
@@ -127,11 +128,11 @@ void InitWindow()
 
     RECT r;
     GetClientRect(window.hWnd, &r);
-    window.device_context = GetDC(window.hWnd);//РёР· С…СЌРЅРґР»Р° РѕРєРЅР° РґРѕСЃС‚Р°РµРј С…СЌРЅРґР» РєРѕРЅС‚РµРєСЃС‚Р° СѓСЃС‚СЂРѕР№СЃС‚РІР° РґР»СЏ СЂРёСЃРѕРІР°РЅРёСЏ
-    window.width = r.right - r.left;//РѕРїСЂРµРґРµР»СЏРµРј СЂР°Р·РјРµСЂС‹ Рё СЃРѕС…СЂР°РЅСЏРµРј
+    window.device_context = GetDC(window.hWnd);//из хэндла окна достаем хэндл контекста устройства для рисования
+    window.width = r.right - r.left;//определяем размеры и сохраняем
     window.height = r.bottom - r.top;
-    window.context = CreateCompatibleDC(window.device_context);//РІС‚РѕСЂРѕР№ Р±СѓС„РµСЂ
-    SelectObject(window.context, CreateCompatibleBitmap(window.device_context, window.width, window.height));//РїСЂРёРІСЏР·С‹РІР°РµРј РѕРєРЅРѕ Рє РєРѕРЅС‚РµРєСЃС‚Сѓ
+    window.context = CreateCompatibleDC(window.device_context);//второй буфер
+    SelectObject(window.context, CreateCompatibleBitmap(window.device_context, window.width, window.height));//привязываем окно к контексту
     GetClientRect(window.hWnd, &r);
 
 }
@@ -142,19 +143,19 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     _In_ int       nCmdShow)
  {
 
-    InitWindow();//Р·РґРµСЃСЊ РёРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РІСЃРµ С‡С‚Рѕ РЅСѓР¶РЅРѕ РґР»СЏ СЂРёСЃРѕРІР°РЅРёСЏ РІ РѕРєРЅРµ
-    InitGame();//Р·РґРµСЃСЊ РёРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј РїРµСЂРµРјРµРЅРЅС‹Рµ РёРіСЂС‹
+    InitWindow();//здесь инициализируем все что нужно для рисования в окне
+    InitGame();//здесь инициализируем переменные игры
     ShowCursor(NULL);
 
     while (!GetAsyncKeyState(VK_ESCAPE))
     {
-        ShowRacketAndBall();//СЂРёСЃСѓРµРј С„РѕРЅ, СЂР°РєРµС‚РєСѓ Рё С€Р°СЂРёРє
-        ShowScore();//СЂРёСЃСѓРµРј РѕС‡РёРє Рё Р¶РёР·РЅРё
-        BitBlt(window.device_context, 0, 0, window.width, window.height, window.context, 0, 0, SRCCOPY);//РєРѕРїРёСЂСѓРµРј Р±СѓС„РµСЂ РІ РѕРєРЅРѕ
-        Sleep(16);//Р¶РґРµРј 16 РјРёР»РёСЃРµРєСѓРЅРґ (1/РєРѕР»РёС‡РµСЃС‚РІРѕ РєР°РґСЂРѕРІ РІ СЃРµРєСѓРЅРґСѓ)
+        ShowRacketAndBall();//рисуем фон, ракетку и шарик
+        ShowScore();//рисуем очик и жизни
+        BitBlt(window.device_context, 0, 0, window.width, window.height, window.context, 0, 0, SRCCOPY);//копируем буфер в окно
+        Sleep(16);//ждем 16 милисекунд (1/количество кадров в секунду)
 
-        ProcessInput();//РѕРїСЂРѕСЃ РєР»Р°РІРёР°С‚СѓСЂС‹
-        LimitHero();//РїСЂРѕРІРµСЂСЏРµРј, С‡С‚РѕР±С‹ СЂР°РєРµС‚РєР° РЅРµ СѓР±РµР¶Р°Р»Р° Р·Р° СЌРєСЂР°РЅ
+        ProcessInput();//опрос клавиатуры
+        LimitHero();//проверяем, чтобы ракетка не убежала за экран
         
     }
 
