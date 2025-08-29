@@ -1,16 +1,32 @@
 #include <windows.h>
 #include <wingdi.h> 
+#include <vector>
+
+using namespace std;
 //linker::system::subsystem  - Windows(/ SUBSYSTEM:WINDOWS) - ожидает wWinMain, а не main
 //configuration::advanced::character set - not set - могу обращаться к структурам 
 //linker::input::additional dependensies Msimg32.lib; Winmm.lib
 
+struct portal_ {
+    int target_room; // Индекс целевой комнаты
+    RECT area; // Область портала на экране
+    bool open = true;
+};
+
+struct room {
+    vector<portal_> portals;
+    HBITMAP background; // Фон комнаты
+
+};
 
 // секция данных игры  
 typedef struct {
     float x, y, width, height, rad, dx, dy, speed;
+    int current_room = 0;
     HBITMAP hBitmap;//хэндл к спрайту шарика 
 } sprite;
 
+vector<room> rooms;
 sprite Hero;//ракетка игрока
 
 struct {
@@ -24,6 +40,17 @@ struct {
     int width, height;//сюда сохраним размеры окна которое создаст программа
 } window;
 
+struct room {
+    vector<portal_> portal;
+
+};
+
+struct portal_ {
+    int target;
+    bool open = true;
+
+};
+
 HBITMAP hBack;// хэндл для фонового изображения
 
 //cекция кода
@@ -33,13 +60,16 @@ void InitGame()
     //в этой секции загружаем спрайты с помощью функций gdi
     //пути относительные - файлы должны лежать рядом с .exe 
     //результат работы LoadImageA сохраняет в хэндлах битмапов, рисование спрайтов будет произовдиться с помощью этих хэндлов e
-    Hero.hBitmap = (HBITMAP)LoadImageA(NULL, "hero1.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    hBack = (HBITMAP)LoadImageA(NULL, "forest.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    Hero.hBitmap = (HBITMAP)LoadImageA(NULL, "chel128px.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    rooms[0].background = (HBITMAP)LoadImageA(NULL, "forest.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+    rooms[1].background = (HBITMAP)LoadImageA(NULL, "forest2.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
+
     //------------------------------------------------------
 
-    Hero.width = 300;
-    Hero.height = 300;
-    Hero.speed = 45;//скорость перемещения ракетки
+
+    Hero.width = 128;
+    Hero.height = 128;
+    Hero.speed = 35;//скорость перемещения ракетки
     Hero.x = window.width / 2.;//ракетка посередине окна
     Hero.y = window.height / 2;
 
@@ -115,9 +145,9 @@ void ShowRacketAndBall()
 void LimitHero()
 {
     Hero.x = max(Hero.x, window.width / 300); // максимально справа
-    Hero.x = min(Hero.x, window.width * 0.9); // минимально справа
-    //Hero.y = max(Hero.y, window.height / 1.4); // максимально сверху
-    //Hero.y = min(Hero.y, window.height / 1.6); // минимально снизу
+    Hero.x = min(Hero.x, window.width * 0.95); // минимально справа
+    Hero.y = max(Hero.y, window.height / 2.4); // максимально сверху
+    Hero.y = min(Hero.y, window.height / 1.5); // минимально снизу
 
 }
 
@@ -145,6 +175,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     InitWindow();//здесь инициализируем все что нужно для рисования в окне
     InitGame();//здесь инициализируем переменные игры
+    mciSendString(TEXT("play ..\\2Dtyaaaaaanki\\8-bitm.mp3 repeat"), NULL, 0, NULL);
     ShowCursor(NULL);
 
     while (!GetAsyncKeyState(VK_ESCAPE))
