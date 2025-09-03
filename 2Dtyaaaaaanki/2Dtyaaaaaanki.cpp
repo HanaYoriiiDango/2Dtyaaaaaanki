@@ -179,9 +179,9 @@ void ShowBitmap(HDC hDC, int x, int y, int x1, int y1, HBITMAP hBitmapObject, bo
     HDC hMemDC;
     BITMAP bm;
 
-    hMemDC = CreateCompatibleDC(hDC); // Создаем контекст памяти, совместимый с контекстом отображения
-    hOldbm = (HBITMAP)SelectObject(hMemDC, hBitmapObject);// Выбираем изображение bitmap в контекст памяти
-
+    hMemDC = CreateCompatibleDC(hDC); // Создаем контекст памяти, совместимый с контекстом отображенияe
+    hOldbm = (HBITMAP)SelectObject(hMemDC, hBitmapObject);// Выбираем изображение bitmap в контекст памятиrger 
+    r
     if (hOldbm) // Если не было ошибок, продолжаем работу
     {
         GetObject(hBitmapObject, sizeof(BITMAP), (LPSTR)&bm); // Определяем размеры изображения
