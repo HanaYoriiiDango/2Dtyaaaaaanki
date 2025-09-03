@@ -10,14 +10,13 @@ using namespace std;
 
 // секция данных игры  
 struct Hero_sprite { // спрайт для игровых персонажей
-    float x, y, width, height, rad, dx, dy, speed;
-    bool collision = false;
+    float x, y, width, height, speed;
     int current_room;
     HBITMAP hBitmap;//хэндл к спрайту 
 };
 
 struct Object_sprite { // для неподвижных игровых элементов (no active)
-    float x, y, width, height, rad, dx, dy, speed;
+    float x, y, width, height;
     bool collision = false;
     HBITMAP hBitmap;//хэндл к спрайту 
 };
@@ -25,8 +24,7 @@ struct Object_sprite { // для неподвижных игровых элементов (no active)
 struct Portal_sprite { // обьекты для перемещения игрока между комнатами
     bool is_locked = false;
     int target_room; // Индекс целевой комнаты
-    float x, y, width, height, speed;
-    bool collision = false;
+    float x, y, width, height;
     HBITMAP hBitmap;//хэндл к спрайту 
 };
 
@@ -37,13 +35,10 @@ struct Location {
 
 };
 
-Location Room[1];
-Hero_sprite Hero;
+struct Player {
+    vector<Hero_sprite> Hero;
 
-struct {
-    int score, balls;//количество набранных очков и оставшихся "жизней"
-    bool action = false;//состояние - ожидание (игрок должен нажать пробел) или игра f
-} game;
+};
 
 struct {
     HWND hWnd;//хэндл окна
@@ -51,32 +46,37 @@ struct {
     int width, height;//сюда сохраним размеры окна которое создаст программа
 } window;
 
-void InitRoom(int NumRoom, HBITMAP hBackR) {
+struct {
+    bool active = true;
+    bool activeR1 = true;
+    bool activeR2 = true;
 
-    Room[NumRoom].hBackR = hBackR;
+} Game;
 
+Location Rooms[2];
+Player Heroes_list[1];
 
-}
+void InitRoom(int NumRoom, LPCSTR FileName) {
 
-void InitPortal(int NumRoom, int NumPortal, float x, float y, float width, float height, int tg, HBITMAP hBitmap) {
-
-    Room[NumRoom].portals[NumPortal].x = x;
-    Room[NumRoom].portals[NumPortal].y = y;
-    Room[NumRoom].portals[NumPortal].width = width;
-    Room[NumRoom].portals[NumPortal].height = height;
-    Room[NumRoom].portals[NumPortal].target_room = tg;
-    Room[NumRoom].portals[NumPortal].hBitmap = hBitmap;
+    Rooms[NumRoom].hBackR = (HBITMAP)LoadImageA(NULL, FileName, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
 
 }
 
-void InitObject(int NumRoom, int NumObject, float x, float y, float width, float height, bool collision, HBITMAP hBitmap) {
+void InitPortal(int NumRoom, bool is_locked, float x, float y, float width, float height, int tg, LPCSTR FileName) {
 
-    Room[NumRoom].object[NumObject].x = x;
-    Room[NumRoom].object[NumObject].y = y;
-    Room[NumRoom].object[NumObject].width = width;
-    Room[NumRoom].object[NumObject].height = height;
-    Room[NumRoom].object[NumObject].collision = collision;
-    Room[NumRoom].object[NumObject].hBitmap = hBitmap;
+    Rooms[NumRoom].portals.push_back({ is_locked, tg, x, y, width, height, (HBITMAP)LoadImageA(NULL, FileName, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE)});
+
+}
+
+void InitObject(int NumRoom, float x, float y, float width, float height, bool collision, LPCSTR FileName) {
+
+    Rooms[NumRoom].object.push_back({ x, y, width, height, collision, (HBITMAP)LoadImageA(NULL, FileName, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE) });
+
+}
+
+void InitHeroes(int NumList, float x, float y, float width, float height, float speed, int current_room, LPCSTR FileName) {
+
+    Heroes_list[NumList].Hero.push_back({x, y, width, height, speed, current_room, (HBITMAP)LoadImageA(NULL, FileName, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE)});
 
 }
 
@@ -85,78 +85,46 @@ void InitGame()
     //в этой секции загружаем спрайты с помощью функций gdi
     //пути относительные - файлы должны лежать рядом с .exe 
     //результат работы LoadImageA сохраняет в хэндлах битмапов, рисование спрайтов будет произовдиться с помощью этих хэндлов e
-    Room[0].hBackR = (HBITMAP)LoadImageA(NULL, "forestR0.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    Room[1].hBackR = (HBITMAP)LoadImageA(NULL, "forestR1.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
 
-    Hero.hBitmap = (HBITMAP)LoadImageA(NULL, "chel128px.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE);
-    Hero.width = 128; // беру размеры изображения
-    Hero.height = 128;
-    Hero.speed = 20;//скорость перемещения персонажа
-    Hero.x = window.width / 14;//герой появляется с левой стороны экрана
-    Hero.y = window.height / 1.8 ;
-    Hero.current_room = 0; // текущее положение
+    InitRoom(0, "forestR0.bmp"); // 1 room
+    InitRoom(1, "forestR1.bmp"); // 2 room
 
-    game.score = 0;
-    game.balls = 9;
+    InitPortal(0, false, window.width / (float)1.2, window.height / (float)2.2, 256, 256, 1, "portal64pxR0.bmp"); // 0 --> 1
+    InitPortal(1, false, window.width / (float)19.2, window.height / (float)2.2, 256, 256, 0, "portal64pxR1.bmp"); // 1 --> 0
 
-    InitRoom();
-    InitRoom();
+    InitObject(0, window.width / (float)2.3, window.height / (float)2.9, 160, 210, true, "scarecrow.bmp"); // scarecrow
+    InitObject(1, window.width / (float)1.2, window.height / (float)1.5, 128, 70, true, "chest128px.bmp"); // chest
 
-    InitPortal(0, 0, window.width / 1.2, window.height / 2.5, 256, 256, 1, (HBITMAP)LoadImageA(NULL, "portal64pxR0.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE)); // 0 --> 1
-    InitPortal(1, 0, window.width / 14, window.height / 1.8, 256, 256, 0, (HBITMAP)LoadImageA(NULL, "portal64pxR1.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE)); // 1 --> 0
+    InitHeroes(0, window.width / (float)14, window.height / (float)1.8, 128, 128, 20, 0, "gena128px.bmp"); // гена появляется с левой стороны
+    //InitHeroes(Valera, window.width / 14, window.height / 1.8, 128, 128, 20, 0, "valera128px.bmp"); // Валера появляется с левой стороны
 
-    InitObject(0, 0, window.width / 2.3, window.height / 2.9, 160, 210, true, (HBITMAP)LoadImageA(NULL, "scarecrow.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE)); // scarecrow
-    InitObject(1, 0, window.width / 1.9, window.height / 3.3, 32, 32, true, (HBITMAP)LoadImageA(NULL, "chest32px.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE)); // chest
-
-
-
-  
 }
 
-void ShowScore()
-{
-    //поиграем шрифтами и цветами
-    SetTextColor(window.context, RGB(160, 160, 160));
-    SetBkColor(window.context, RGB(0, 0, 0));
-    SetBkMode(window.context, TRANSPARENT);
-    auto hFont = CreateFont(70, 0, 0, 0, FW_BOLD, 0, 0, 0, 0, 0, 0, 2, 0, "CALIBRI");
-    auto hTmp = (HFONT)SelectObject(window.context, hFont);
+void ObjectCollision(int NumRoom, int NumObject, int NumList, int HeroID) {
 
-    char txt[32];//буфер для текста
-    _itoa_s(game.score, txt, 10);//преобразование числовой переменной в текст. текст окажется в переменной txt
-    TextOutA(window.context, 10, 10, "Score", 5);
-    TextOutA(window.context, 200, 10, (LPCSTR)txt, strlen(txt));
+    if (Rooms[NumRoom].object[NumObject].collision) {
 
-    _itoa_s(game.balls, txt, 10);
-    TextOutA(window.context, 10, 100, "Balls", 5);
-    TextOutA(window.context, 200, 100, (LPCSTR)txt, strlen(txt));
-}
-
-void ObjectCollision(object_sprite object) {
-
-    if (object.collision) {
-
-        float positionX = Hero.x;
-        float positionY = Hero.y;
+        float positionX = Heroes_list[NumList].Hero[HeroID].x;
+        float positionY = Heroes_list[NumList].Hero[HeroID].y;
 
         bool collisionHandled = false;
-        const int line = object.width, column = object.height;
+        const int line = (int)Rooms[NumRoom].object[NumObject].width, column = (int)Rooms[NumRoom].object[NumObject].height;
 
         for (int i = 0; i < line; i++) {
             for (int j = 0; j < column; j++) {
 
                 if (!collisionHandled) { // Проверяем только если столкновение ещё не обработано
 
-                    if (Hero.x + Hero.width >= object.x && Hero.x <= object.x + object.width && // 
-                        Hero.y + Hero.height >= object.y && Hero.y <= object.y + object.height) {
+                    if (
+                        Heroes_list[NumList].Hero[HeroID].x + Heroes_list[NumList].Hero[HeroID].width >= Rooms[NumRoom].object[NumObject].x
+                        && Heroes_list[NumList].Hero[HeroID].x <= Rooms[NumRoom].object[NumObject].x + Rooms[NumRoom].object[NumObject].width
+                        && Heroes_list[NumList].Hero[HeroID].y + Heroes_list[NumList].Hero[HeroID].height >= Rooms[NumRoom].object[NumObject].y
+                        && Heroes_list[NumList].Hero[HeroID].y <= Rooms[NumRoom].object[NumObject].y + Rooms[NumRoom].object[NumObject].height ) {
 
-                        //float penetrationX = min(Hero.x + Hero.width - object.x, object.x + object.width - Hero.x);// глубина проникновения по осям
-                        //float penetrationY = min(Hero.y + Hero.height - object.y, object.y + object.height - Hero.y); // это рассчет расстояния между обьектами
-
-                        float Left = (Hero.x + Hero.width) - object.x; // расстояние до левой стороны блока
-                        float Right = (object.x + object.width) - (Hero.x - Hero.width); // расстояние до правой стороны блока
-                        float Top = (Hero.y + Hero.height) - object.y; // расстояние до верхней стороны блока
-                        float Bottom = (object.y +object.height) - (Hero.y - Hero.height); // расстояние до нижней стороны блока
+                        float Left = (Heroes_list[NumList].Hero[HeroID].x + Heroes_list[NumList].Hero[HeroID].width) - Rooms[NumRoom].object[NumObject].x; // расстояние до левой стороны блока
+                        float Right = (Rooms[NumRoom].object[NumObject].x + Rooms[NumRoom].object[NumObject].width) - (Heroes_list[NumList].Hero[HeroID].x - Heroes_list[NumList].Hero[HeroID].width); // расстояние до правой стороны блока
+                        float Top = (Heroes_list[NumList].Hero[HeroID].y + Heroes_list[NumList].Hero[HeroID].height) - Rooms[NumRoom].object[NumObject].y; // расстояние до верхней стороны блока
+                        float Bottom = (Rooms[NumRoom].object[NumObject].y + Rooms[NumRoom].object[NumObject].height) - (Heroes_list[NumList].Hero[HeroID].y - Heroes_list[NumList].Hero[HeroID].height); // расстояние до нижней стороны блока
 
                         //// Находим минимальное перекрытие вручную
                         float minOverlap = Left; // Предполагаем, что минимальное значение — overlapLeft
@@ -166,26 +134,25 @@ void ObjectCollision(object_sprite object) {
 
                         //// Изменяем направление мяча в зависимости от стороны столкновения
                         if (minOverlap == Left) {
-                            Hero.x -= Hero.speed; // игрок будет стоять на месте скользя по обьекту 
-                            Hero.y = positionY + 1; // эффект скольжения 
+                            Heroes_list[NumList].Hero[HeroID].x -= Heroes_list[NumList].Hero[HeroID].speed; // игрок будет стоять на месте скользя по обьекту 
+                            Heroes_list[NumList].Hero[HeroID].y = positionY + 1; // эффект скольжения 
 
                         }
                         else if (minOverlap == Right) { // диагональное перемещение в обработку?
-                            Hero.x += Hero.speed;
-                            Hero.y = positionY - 1;
+                            Heroes_list[NumList].Hero[HeroID].x += Heroes_list[NumList].Hero[HeroID].speed;
+                            Heroes_list[NumList].Hero[HeroID].y = positionY - 1;
 
                         }
                         if (minOverlap == Top) {
-                            Hero.y -= Hero.speed;
-                            Hero.x = positionX + 1;
+                            Heroes_list[NumList].Hero[HeroID].y -= Heroes_list[NumList].Hero[HeroID].speed;
+                            Heroes_list[NumList].Hero[HeroID].x = positionX + 1;
 
                         }
                         else if (minOverlap == Bottom) {
-                            Hero.y += Hero.speed;
-                            Hero.x = positionX - 1;
+                            Heroes_list[NumList].Hero[HeroID].y += Heroes_list[NumList].Hero[HeroID].speed;
+                            Heroes_list[NumList].Hero[HeroID].x = positionX - 1;
 
                         }
-
                     }
 
                         collisionHandled = true; // Столкновение обработано, больше не проверяем другие блоки
@@ -197,12 +164,12 @@ void ObjectCollision(object_sprite object) {
 
 }
 
-void ProcessInput()
+void ProcessInput(int NumList, int HeroID)
 {
-    if (GetAsyncKeyState('W')) Hero.y -= Hero.speed;
-    if (GetAsyncKeyState('A')) Hero.x -= Hero.speed;
-    if (GetAsyncKeyState('S')) Hero.y += Hero.speed;
-    if (GetAsyncKeyState('D')) Hero.x += Hero.speed;
+    if (GetAsyncKeyState('W')) Heroes_list[NumList].Hero[HeroID].y -= Heroes_list[NumList].Hero[HeroID].speed;
+    if (GetAsyncKeyState('A')) Heroes_list[NumList].Hero[HeroID].x -= Heroes_list[NumList].Hero[HeroID].speed;
+    if (GetAsyncKeyState('S')) Heroes_list[NumList].Hero[HeroID].y += Heroes_list[NumList].Hero[HeroID].speed;
+    if (GetAsyncKeyState('D')) Heroes_list[NumList].Hero[HeroID].x += Heroes_list[NumList].Hero[HeroID].speed;
         
 }
 
@@ -237,34 +204,172 @@ void ShowBitmap(HDC hDC, int x, int y, int x1, int y1, HBITMAP hBitmapObject, bo
     ReleaseDC(window.hWnd, hMemDC);
 }
 
-void ShowLocation(Location location, portal_sprite portal, hero_sprite hero, object_sprite object) { 
+void ShowPortal(int NumRoom, int NumPortal) {
 
-        ShowBitmap(window.context, 0, 0, window.width, window.height, location.hBackR, false);//задний фон
-        ShowBitmap(window.context, object.x, object.y, object.width, object.height, object.hBitmap, true);// enemy
-        ShowBitmap(window.context, hero.x, hero.y, hero.width, hero.height, hero.hBitmap, true);// enemy
-        ShowBitmap(window.context, portal.x, portal.y, portal.width, portal.height, portal.hBitmap, true);// портал
-        ObjectCollision(object);
+    int RoomX = (int)Rooms[NumRoom].portals[NumPortal].x;
+    int RoomY = (int)Rooms[NumRoom].portals[NumPortal].y;
+    int RoomWidth = (int)Rooms[NumRoom].portals[NumPortal].width;
+    int RoomHeight = (int)Rooms[NumRoom].portals[NumPortal].height;
+    HBITMAP PortalSprite = Rooms[NumRoom].portals[NumPortal].hBitmap;
 
-   
+    ShowBitmap(window.context, RoomX, RoomY, RoomWidth, RoomHeight, PortalSprite, true);// портал 
+
+}
+
+void ShowObject(int NumRoom, int NumObject, int NumList, int HeroID) {
+
+    int ObjectX = (int)Rooms[NumRoom].object[NumObject].x;
+    int ObjectY = (int)Rooms[NumRoom].object[NumObject].y;
+    int ObjectWidth = (int)Rooms[NumRoom].object[NumObject].width;
+    int ObjectHeight = (int)Rooms[NumRoom].object[NumObject].height;
+    HBITMAP ObjectSprite = Rooms[NumRoom].object[NumObject].hBitmap;
+
+    ShowBitmap(window.context, ObjectX, ObjectY, ObjectWidth, ObjectHeight, ObjectSprite, true);// enemy
+    ObjectCollision(NumRoom, NumObject, NumList, HeroID); // коллизия обьекта
+
+}
+
+void ShowHero(int NumList, int HeroID) {
+
+    int HeroX = (int)Heroes_list[NumList].Hero[HeroID].x;
+    int HeroY = (int)Heroes_list[NumList].Hero[HeroID].y;
+    int HeroWidth = (int)Heroes_list[NumList].Hero[HeroID].width;
+    int HeroHeight = (int)Heroes_list[NumList].Hero[HeroID].height;
+    HBITMAP HeroSprite = Heroes_list[NumList].Hero[HeroID].hBitmap;
+
+    ShowBitmap(window.context, HeroX, HeroY, HeroWidth, HeroHeight, HeroSprite, true);// enemy
+
+}
+
+void ShowRoom(int NumRoom, int NumList, int HeroID) {
+
+    ShowBitmap(window.context, 0, 0, window.width, window.height, Rooms[NumRoom].hBackR, false);//задний фон
+    ShowPortal(NumRoom, 0);
+    ShowObject(NumRoom, 0, NumList, HeroID);
+    ShowHero( NumList, HeroID);
+
 }
 
 
-void LimitHero()
+void LimitHero(int NumList, int HeroID)
 {
-    Hero.x = max(Hero.x, window.width / 300); // максимально сСЛЕВА
-    Hero.x = min(Hero.x, window.width * 0.95); // минимально справа
-    Hero.y = max(Hero.y, window.height / 2.4); // максимально сверху
-    Hero.y = min(Hero.y, window.height / 1.5); // минимально снизу
+    Heroes_list[NumList].Hero[HeroID].x = max(Heroes_list[NumList].Hero[HeroID].x, window.width / 300); // максимально сСЛЕВА 
+    Heroes_list[NumList].Hero[HeroID].x = min(Heroes_list[NumList].Hero[HeroID].x, window.width * 0.95); // минимально справа
+    Heroes_list[NumList].Hero[HeroID].y = max(Heroes_list[NumList].Hero[HeroID].y, window.height / 2.4); // максимально сверху
+    Heroes_list[NumList].Hero[HeroID].y = min(Heroes_list[NumList].Hero[HeroID].y, window.height / 1.5); // минимально снизу
 
 }
 
-void ShowGame() {
+void TPControl( int NumList, int HeroID, int Target) {
 
-    ShowBitmap(window.context, 0, 0, window.width, window.height, Room0.hBackR, false);//задний фон
-    ShowBitmap(window.context, object.x, object.y, object.width, object.height, object.hBitmap, true);// enemy
-    ShowBitmap(window.context, hero.x, hero.y, hero.width, hero.height, hero.hBitmap, true);// enemy
-    ShowBitmap(window.context, portal.x, portal.y, portal.width, portal.height, portal.hBitmap, true);// портал
-    ObjectCollision(object);
+    if (Heroes_list[NumList].Hero[HeroID].current_room == 0) {
+        if (Game.activeR1) {
+
+            Heroes_list[NumList].Hero[HeroID].current_room = Target;
+            Game.activeR1 = false;
+            Game.activeR2 = true;
+
+        }
+    }
+    else if (Heroes_list[NumList].Hero[HeroID].current_room == 1) {
+
+        if (Game.activeR2) {
+
+            Heroes_list[NumList].Hero[HeroID].current_room = Target;
+            Game.activeR2 = false;
+            Game.activeR1 = true;
+
+        }
+    }
+
+
+
+}
+
+void RunPortal(int NumList, int HeroID, int NumPortal) {
+
+    if (!Rooms[Heroes_list[NumList].Hero[HeroID].current_room].portals[NumPortal].is_locked) {
+
+        bool collisionHandled = false;
+        int PortalTarget = Rooms[Heroes_list[NumList].Hero[HeroID].current_room].portals[NumPortal].target_room;
+        int HeroCurrentRoom = Heroes_list[NumList].Hero[HeroID].current_room;
+
+        float HeroPositionX = Heroes_list[NumList].Hero[HeroID].x;
+        float HeroPositionY = Heroes_list[NumList].Hero[HeroID].y;
+        float HeroWidth = Heroes_list[NumList].Hero[HeroID].width;
+        float HeroHeight = Heroes_list[NumList].Hero[HeroID].height;
+
+        float PortalPositionX = Rooms[HeroCurrentRoom].portals[NumPortal].x;
+        float PortalPositionY = Rooms[HeroCurrentRoom].portals[NumPortal].y;
+        const int PortalWidth = Rooms[HeroCurrentRoom].portals[NumPortal].width;
+        const int PortalHeight = Rooms[HeroCurrentRoom].portals[NumPortal].height;
+
+        for (int i = 0; i < PortalWidth; i++) {
+            for (int j = 0; j < PortalHeight; j++) {
+
+                if (!collisionHandled) { // Проверяем только если столкновение ещё не обработано
+
+                    if (
+                        HeroPositionX + HeroWidth >= PortalPositionX &&
+                        HeroPositionX <= PortalPositionX + PortalWidth &&
+                        HeroPositionY + HeroHeight >= PortalPositionY &&
+                        HeroPositionY <= PortalPositionY + PortalHeight) {
+
+                        float Left = (HeroPositionX + HeroWidth) - PortalPositionX; // расстояние до левой стороны блока
+                        float Right = (PortalPositionX + PortalWidth) - (HeroPositionX - HeroWidth); // расстояние до правой стороны блока
+                        float Top = (HeroPositionY + HeroHeight) - PortalPositionY; // расстояние до верхней стороны блока
+                        float Bottom = (PortalPositionY + PortalHeight) - (HeroPositionY - HeroHeight); // расстояние до нижней стороны блока
+
+                        //// Находим минимальное перекрытие вручную
+                        float minOverlap = Left; // Предполагаем, что минимальное значение — overlapLeft
+                        if (Right < minOverlap) minOverlap = Right;
+                        if (Top < minOverlap) minOverlap = Top;
+                        if (Bottom < minOverlap) minOverlap = Bottom;
+
+                        //// Изменяем направление мяча в зависимости от стороны столкновения
+                        if (minOverlap == Left) {
+
+                            TPControl(NumList, HeroID, PortalTarget);
+                            Heroes_list[NumList].Hero[HeroID].x = window.width / (float)2.3;
+                            Heroes_list[NumList].Hero[HeroID].y = window.height / (float)3.4;
+
+                        }
+                        else if (minOverlap == Right) { // диагональное перемещение в обработку?
+
+                            TPControl(NumList, HeroID, PortalTarget);
+                            Heroes_list[NumList].Hero[HeroID].x = window.width / (float)2.3;
+                            Heroes_list[NumList].Hero[HeroID].y = window.height / (float)3.4;
+                        }
+                        if (minOverlap == Top) {
+
+                            TPControl(NumList, HeroID, PortalTarget);
+                            Heroes_list[NumList].Hero[HeroID].x = window.width / (float)2.3;
+                            Heroes_list[NumList].Hero[HeroID].y = window.height / (float)3.4;
+
+                        }
+                        else if (minOverlap == Bottom) {
+
+                            TPControl(NumList, HeroID, PortalTarget);
+                            Heroes_list[NumList].Hero[HeroID].x = window.width / (float)2.3;
+                            Heroes_list[NumList].Hero[HeroID].y = window.height / (float)3.4;
+
+                        }
+                    }
+
+                    collisionHandled = true; // Столкновение обработано, больше не проверяем другие блоки
+                    return;
+                }
+            }
+        }
+    }
+ }
+
+void ProcessGame(int NumList, int HeroID, int PortalNum) {
+
+    ProcessInput(NumList, HeroID);//опрос клавиатуры
+    LimitHero(NumList, HeroID);//проверяем, чтобы спрайт героя не убежал за пределы экрана
+    RunPortal(NumList, HeroID, PortalNum);
+
 
 }
 
@@ -284,15 +389,20 @@ void InitWindow()
 
 }
 
-void clear() {
+void ClearRoom(HBITMAP hBackR, HBITMAP portal, HBITMAP object, HBITMAP hero) {
 
-    DeleteObject(Chest.hBitmap);
-    DeleteObject(Scarecrow.hBitmap);
-    DeleteObject(Hero.hBitmap);
-    DeleteObject(PortalLeft.hBitmap);
-    DeleteObject(PortalRight.hBitmap);
-    DeleteObject(Room1.hBackR);
-    DeleteObject(Room0.hBackR);
+    DeleteObject(hero);
+    DeleteObject(object);
+    DeleteObject(portal);
+    DeleteObject(hBackR);
+
+}
+
+void ClearGame() {
+
+    DeleteObject(Heroes_list[0].Hero[0].hBitmap);
+    ClearRoom(Rooms[0].hBackR, Rooms[0].portals[0].hBitmap, Rooms[0].object[0].hBitmap, Heroes_list[0].Hero[0].hBitmap); // Heroes_list[0].Hero[0].hBitmap
+    ClearRoom(Rooms[1].hBackR, Rooms[1].portals[0].hBitmap, Rooms[1].object[0].hBitmap, Heroes_list[0].Hero[0].hBitmap);
 
 }
 
@@ -307,18 +417,34 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     mciSendString(TEXT("play ..\\2Dtyaaaaaanki\\8-bitm.mp3 repeat"), NULL, 0, NULL);
     ShowCursor(NULL);
 
-    while (!GetAsyncKeyState(VK_ESCAPE))
+    while (!GetAsyncKeyState(VK_ESCAPE) && Game.active)
     {
-        ShowGame();//рисуем фон, героя и обьекты
-        ShowScore();//рисуем хуню всякую
-        BitBlt(window.device_context, 0, 0, window.width, window.height, window.context, 0, 0, SRCCOPY);//копируем буфер в окно
-        Sleep(16);//ждем 16 милисекунд (1/количество кадров в секунду)
+        while (!GetAsyncKeyState(VK_ESCAPE) && Game.activeR1) {
 
-        ProcessInput();//опрос клавиатуры
-        LimitHero();//проверяем, чтобы спрайт героя не убежал за пределы экрана
-        
+            ShowRoom(0, 0, 0);
+            BitBlt(window.device_context, 0, 0, window.width, window.height, window.context, 0, 0, SRCCOPY);//копируем буфер в окно
+            Sleep(16);//ждем 16 милисекунд (1/количество кадров в секунду)
+            ProcessGame(0, 0, 0);
+
+
+
+        }
+
+        //ClearRoom(Rooms[0].hBackR, Rooms[0].portals[0].hBitmap, Rooms[0].object[0].hBitmap, Heroes_list[0].Hero[0].hBitmap);
+
+        while (!GetAsyncKeyState(VK_ESCAPE) && Game.activeR2) {
+
+            ShowRoom(1, 0, 0);
+            BitBlt(window.device_context, 0, 0, window.width, window.height, window.context, 0, 0, SRCCOPY);//копируем буфер в окно
+            Sleep(16);//ждем 16 милисекунд (1/количество кадров в секунду)
+            ProcessGame(0, 0, 0);
+
+
+
+        }
+
+        //ClearRoom(Rooms[1].hBackR, Rooms[1].portals[0].hBitmap, Rooms[1].object[0].hBitmap, Heroes_list[0].Hero[0].hBitmap);
     }
 
-    clear();
-
+    ClearGame();
 }
