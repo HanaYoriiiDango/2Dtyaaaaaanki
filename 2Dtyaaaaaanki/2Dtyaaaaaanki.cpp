@@ -96,7 +96,7 @@ void InitGame()
     InitObject(1, window.width / (float)1.2, window.height / (float)1.5, 128, 70, true, "chest128px.bmp"); // chest
 
     InitHeroes(0, window.width / (float)14, window.height / (float)1.8, 128, 128, 20, 0, "gena128px.bmp"); // гена по€вл€етс€ с левой стороны
-    //InitHeroes(Valera, window.width / 14, window.height / 1.8, 128, 128, 20, 0, "valera128px.bmp"); // ¬алера по€вл€етс€ с левой стороны
+    //InitHeroes(Valera, window.width / 14, window.height / 1.8, 128, 128, 20, 0, "valera128px.bmp"); // ¬алера по€вл€етс€ с левой стороны ww
 
 }
 
