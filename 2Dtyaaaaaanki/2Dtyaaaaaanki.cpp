@@ -178,7 +178,12 @@ void InitGame()
 
     Init.Room("forestR1.bmp");// 2 room
     Init.Portal("portal64pxR1.bmp", window.width / (float)19.2, window.height / (float)2.2);
-    Init.Object("chest128px.bmp", window.width / (float)1.2, window.height / (float)1.5);
+    Init.Portal("portal64pxR2.bmp", window.width / (float)1.2, window.height / (float)2.2);
+    Init.Object("chest128px.bmp", window.width / (float)2.3, window.height / (float)1.8);
+
+    Init.Room("forestR2.bmp");// 3 room
+    Init.Portal("portal64pxR3.bmp", window.width / (float)19.2, window.height / (float)2.2);
+
 
     Init.Heroes("gena128px.bmp", window.width / (float)14, window.height / (float)1.8);
     //Init.Heroes("valera128px.bmp", window.width / (float)14, window.height / (float)1.8);
@@ -305,15 +310,12 @@ void PortalRun() {
                 
                     Hero.current_room = portal.target_room;
                     Hero.x = window.width / (float)5.2;
-
                 
                 }
                 else {
                     
                     Hero.current_room = portal.target_room;
                     Hero.x = window.width / (float)1.3;
-
-
                 
                 }
             }
@@ -325,13 +327,42 @@ void PortalRun() {
     }
 }
 
+void TestDrawText() {
+
+    SetTextColor(window.context, RGB(160, 160, 160));
+    SetBkColor(window.context, RGB(0, 0, 0));
+    SetBkMode(window.context, TRANSPARENT);
+    //auto hFont = CreateFont(70, 0, 0, 0, FW_BOLD, 0, 0, 0, 0, 0, 0, 2, 0, "CALIBRI");
+    //auto hTmp = (HFONT)SelectObject(window.context, hFont);
+
+    if (Hero.current_room == 2) {
+        if (Hero.x == window.width / 2 && Hero.y == window.height / 2) {
+
+            TextOutA(window.context, window.width / 2, window.height / 2, (LPCSTR)"Press to E", 8);
+
+
+            //RECT rect = { 100, 100, 100, 100 };
+            //DrawText(window.context, "Press to E", -1, &rect, DT_CENTER | DT_VCENTER);
+
+
+            if (GetAsyncKeyState('E')) {
+
+                TextOutA(window.context, window.width / 2, window.height / 2, (LPCSTR)"sosi<3", 6);
+
+                //DrawText(window.context, "sosi", -1, &rect, DT_CENTER | DT_VCENTER);
+
+            }
+        }
+    }
+}
+
 void ProcessGame() { 
 
     ProcessInput();//опрос клавиатуры
-    LimitHero();//проверяем, чтобы спрайт героя не убежал за пределы экрана
+    //LimitHero();//проверяем, чтобы спрайт героя не убежал за пределы экрана
     Collision();
     PortalRun(); // перемещение через портал
-
+    TestDrawText();
 
 }
 
@@ -352,16 +383,20 @@ void InitWindow()
 }
 
 void Clear() { 
-    // можно с помощью метода из init упростить очистку ресурсов???? 
+    // можно с помощью метода упростить очистку ресурсов???? 
 
     DeleteObject(Hero.hBitmap);
-    DeleteObject(Rooms[1].object[0].hBitmap);
-    DeleteObject(Rooms[0].object[0].hBitmap);
-    DeleteObject(Rooms[1].portals[0].hBitmap);
-    DeleteObject(Rooms[0].portals[0].hBitmap);
-    DeleteObject(Rooms[1].hBackR);
-    DeleteObject(Rooms[0].hBackR);
+    DeleteObject(Rooms[2].portals[0].hBitmap);
+    DeleteObject(Rooms[2].hBackR);
 
+    DeleteObject(Rooms[1].object[0].hBitmap);
+    DeleteObject(Rooms[1].portals[1].hBitmap);
+    DeleteObject(Rooms[1].portals[0].hBitmap);
+    DeleteObject(Rooms[1].hBackR);
+
+    DeleteObject(Rooms[0].object[0].hBitmap);
+    DeleteObject(Rooms[0].portals[0].hBitmap);
+    DeleteObject(Rooms[0].hBackR);
 
 }
 
