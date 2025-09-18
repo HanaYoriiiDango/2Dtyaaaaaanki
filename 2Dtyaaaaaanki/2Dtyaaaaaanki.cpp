@@ -3,21 +3,21 @@
 #include <wingdi.h> 
 #include <vector>
 
+using namespace std;
+ 
 /*
 ________________________________________ЗАМЕТКИ______________________________________________________________
 Единая система регистрации будет состоять из массива чисел, шде каждая ячейка это номер, занятый этим обьектом для инициализации.
 Таким образом я смогу избежать в программе повторений и у разны элеиментов не будет повторяющихся номеров.
 Программа должнга сама понимать при вызове метода иницализации игровог элемента, какой номер он занимает в системе и какого типа обьект
 инициализации.В зависимости от того какорй обьект будет инициалиазирован, будут выставляться разные его характеристик по умолчанию.
-Однако будет возможность настраивать характеристик каждого обьекта. 
-Нанпример, при создании комнаты программа будет смотреть на то, какие номера уже существуют, и назнчать последующий.
-Можно ли при созданни портала/обьекта через рект автоматически устанавливать размеры спрайта в этой системе?
+Однако будет возможность настраивать характеристики каждого обьекта отдельно. 
+Например, при создании комнаты программа будет смотреть на то, какие номера уже существуют и назначать последующий.
 
 */
 
-using namespace std;
 //linker::system::subsystem  - Windows(/ SUBSYSTEM:WINDOWS) - ожидает wWinMain, а не main
-//configuration::advanced::character set - not set - могу обращаться к структурам 
+//configuration::advanced::character set - not set - могу обращаться к структурам c typedef
 //linker::input::additional dependensies Msimg32.lib; Winmm.lib
 
 struct Player { // спрайт для игровых персонажей
@@ -59,6 +59,20 @@ struct {
 
 Location Rooms[10];
 Player Hero;
+
+class interaction { // буду описывать разные взаимодействия c игровыми объектами 
+private:
+
+
+
+
+public:
+
+
+
+
+
+};
 
 class InitSystem {
 private:
@@ -327,42 +341,12 @@ void PortalRun() {
     }
 }
 
-void TestDrawText() {
-
-    SetTextColor(window.context, RGB(160, 160, 160));
-    SetBkColor(window.context, RGB(0, 0, 0));
-    SetBkMode(window.context, TRANSPARENT);
-    //auto hFont = CreateFont(70, 0, 0, 0, FW_BOLD, 0, 0, 0, 0, 0, 0, 2, 0, "CALIBRI");
-    //auto hTmp = (HFONT)SelectObject(window.context, hFont);
-
-    if (Hero.current_room == 2) {
-        if (Hero.x == window.width / 2 && Hero.y == window.height / 2) {
-
-            TextOutA(window.context, window.width / 2, window.height / 2, (LPCSTR)"Press to E", 8);
-
-
-            //RECT rect = { 100, 100, 100, 100 };
-            //DrawText(window.context, "Press to E", -1, &rect, DT_CENTER | DT_VCENTER);
-
-
-            if (GetAsyncKeyState('E')) {
-
-                TextOutA(window.context, window.width / 2, window.height / 2, (LPCSTR)"sosi<3", 6);
-
-                //DrawText(window.context, "sosi", -1, &rect, DT_CENTER | DT_VCENTER);
-
-            }
-        }
-    }
-}
-
 void ProcessGame() { 
 
     ProcessInput();//опрос клавиатуры
-    //LimitHero();//проверяем, чтобы спрайт героя не убежал за пределы экрана
+    LimitHero();//проверяем, чтобы спрайт героя не убежал за пределы экрана
     Collision();
     PortalRun(); // перемещение через портал
-    TestDrawText();
 
 }
 
