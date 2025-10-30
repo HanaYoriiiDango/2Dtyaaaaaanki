@@ -60,20 +60,6 @@ struct {
 Location Rooms[10];
 Player Hero;
 
-class interaction { // буду описывать разные взаимодействия c игровыми объектами 
-private:
-
-
-
-
-public:
-
-
-
-
-
-};
-
 class InitSystem {
 private:
 
